@@ -195,6 +195,32 @@
             font-size: 20px;
             font-weight: 600;
             color: #333;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        
+        .product-name:hover {
+            background: #f0f0f0;
+            color: #667eea;
+        }
+        
+        .product-name-edit {
+            font-size: 20px;
+            font-weight: 600;
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            outline: none;
+            width: 400px;
+            max-width: 60%;
+        }
+        
+        .product-name-edit:focus {
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .btn-icon {
@@ -732,7 +758,7 @@
     <div class="container">
         <div class="header">
             <h1>⚙️ Excel价格配置编辑器</h1>
-            <p>可视化编辑价格配置文件，支持固定价格和价格区间</p>
+            <p>可视化编辑价格配置文件，支持固定价格和价格区间 | ✨ 点击产品名称可编辑</p>
         </div>
 
         <div class="toolbar">
@@ -1017,8 +1043,12 @@
             
             card.innerHTML = `
                 <div class="product-header">
-                    <div class="product-name">${productName}</div>
-                    <button class="btn btn-danger btn-icon" onclick="removeProduct('${productName}')">✕ 删除</button>
+                    <div class="product-name" 
+                         onclick="editProductName('${productName.replace(/'/g, "\\'")}', this)" 
+                         title="点击编辑产品名称">
+                        ${productName} <span style="font-size: 14px; color: #999;">✏️</span>
+                    </div>
+                    <button class="btn btn-danger btn-icon" onclick="removeProduct('${productName.replace(/'/g, "\\'")}')">✕ 删除</button>
                 </div>
                 <div class="price-config">
                     ${regionHTML}
@@ -1332,6 +1362,85 @@
         }
 
         // 删除产品
+        // 编辑产品名称
+        function editProductName(oldName, element) {
+            // 创建输入框
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'product-name-edit';
+            input.value = oldName;
+            
+            // 替换显示元素
+            element.replaceWith(input);
+            input.focus();
+            input.select();
+            
+            // 保存函数
+            const saveEdit = () => {
+                const newName = input.value.trim();
+                
+                // 验证新名称
+                if (!newName) {
+                    showMessage('产品名称不能为空！', 'error');
+                    input.focus();
+                    return;
+                }
+                
+                if (newName === oldName) {
+                    // 名称未改变，恢复显示
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'product-name';
+                    nameDiv.onclick = function() { editProductName(oldName, this); };
+                    nameDiv.title = '点击编辑产品名称';
+                    nameDiv.textContent = oldName;
+                    input.replaceWith(nameDiv);
+                    return;
+                }
+                
+                // 检查新名称是否已存在
+                if (config[newName]) {
+                    showMessage(`产品名称 "${newName}" 已存在！`, 'error');
+                    input.focus();
+                    return;
+                }
+                
+                // 更新配置
+                config[newName] = config[oldName];
+                delete config[oldName];
+                
+                // 重新渲染
+                renderProducts();
+                saveToServer();
+                showMessage(`产品名称已从 "${oldName}" 更新为 "${newName}"！`, 'success');
+            };
+            
+            // 取消编辑
+            const cancelEdit = () => {
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'product-name';
+                nameDiv.onclick = function() { editProductName(oldName, this); };
+                nameDiv.title = '点击编辑产品名称';
+                nameDiv.textContent = oldName;
+                input.replaceWith(nameDiv);
+            };
+            
+            // 回车保存
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveEdit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelEdit();
+                }
+            });
+            
+            // 失去焦点时保存
+            input.addEventListener('blur', () => {
+                setTimeout(saveEdit, 100);
+            });
+        }
+        
         function removeProduct(productName) {
             if (confirm(`确定要删除产品 "${productName}" 吗？`)) {
                 delete config[productName];
