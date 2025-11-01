@@ -50,13 +50,12 @@ class ExcelPriceUpdaterBuilder:
             ("config_editor.html", "."),
             ("config.json", "."),
             ("README.md", "."),
-            ("QUICKSTART.md", "."),
         ]
 
         # 排除模块
         self.excludes = [
-            "tkinter", "unittest", "test", "setuptools", "pip", "wheel",
-            "matplotlib", "scipy", "IPython", "jupyter"
+            "tkinter", "unittest", "test", "matplotlib", "scipy", 
+            "IPython", "jupyter", "pkg_resources"
         ]
 
         # 隐藏导入
@@ -72,7 +71,9 @@ class ExcelPriceUpdaterBuilder:
             "openpyxl.worksheet", "openpyxl.worksheet.worksheet",
             # 标准库
             "json", "re", "random", "pathlib", "http.server",
-            "urllib.parse", "email.parser", "io", "tempfile"
+            "urllib.parse", "email.parser", "io", "tempfile",
+            # 避免 pkg_resources 相关错误
+            "email", "email.mime", "email.mime.text"
         ]
 
     # ---------------------- 日志 ----------------------
@@ -210,6 +211,9 @@ class ExcelPriceUpdaterBuilder:
         # 添加项目路径
         cmd.extend(["--paths", str(self.project_root)])
         
+        # 禁用 UPX 压缩（避免某些兼容性问题）
+        cmd.append("--noupx")
+        
         # 收集子模块（确保所有依赖都被打包）
         cmd.extend(["--collect-all", "pandas"])
         cmd.extend(["--collect-all", "openpyxl"])
@@ -225,7 +229,7 @@ class ExcelPriceUpdaterBuilder:
         for mod in self.hidden_imports:
             cmd.extend(["--hidden-import", mod])
 
-        # 排除模块
+        # 排除模块（避免 pkg_resources 相关错误）
         for mod in self.excludes:
             cmd.extend(["--exclude-module", mod])
         
@@ -298,7 +302,7 @@ class ExcelPriceUpdaterBuilder:
                 shutil.copy2(html_src, release_dir / html_file)
 
         # 复制文档
-        for doc_file in ['README.md', 'QUICKSTART.md', 'requirements.txt']:
+        for doc_file in ['README.md', 'requirements.txt']:
             doc_src = self.project_root / doc_file
             if doc_src.exists():
                 shutil.copy2(doc_src, release_dir / doc_file)
@@ -334,7 +338,6 @@ Excel价格批量更新工具 使用说明
 - index.html                Web界面（已内嵌）
 - config_editor.html        配置编辑器（已内嵌）
 - README.md                 详细文档
-- QUICKSTART.md             快速入门
 - USAGE.txt                 本文件
 
 ========================================
@@ -452,8 +455,8 @@ A: 可以一次选择多个Excel文件进行处理
 
 遇到问题？
   1. 查看 README.md 获取详细文档
-  2. 查看 QUICKSTART.md 获取快速入门
-  3. 检查配置文件格式是否正确
+  2. 检查配置文件格式是否正确
+  3. 查看 USAGE.txt 获取使用说明
 
 ========================================
 """

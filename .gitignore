@@ -30,3 +30,11 @@ Thumbs.db
 sample_products.xlsx
 create_sample_excel.py
 
+# 发布包目录
+release/
+
+# PyInstaller 构建文件
+build/
+dist/
+*.spec
+
