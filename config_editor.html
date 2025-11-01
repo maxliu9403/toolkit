@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel价格配置编辑器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: white;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            background: white;
+            overflow: hidden;
+            min-height: 100vh;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            .container {
+                min-height: 100vh;
+            }
+            .header {
+                padding: 20px 15px;
+            }
+            .header h1 {
+                font-size: 22px;
+            }
+            .toolbar {
+                padding: 15px;
+            }
+            .btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .content {
+                padding: 15px;
+            }
+            .product-card {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            .search-bar {
+                padding: 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 18px;
+            }
+            .header p {
+                font-size: 12px;
+            }
+            .toolbar {
+                padding: 10px;
+            }
+            .btn {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+            .content {
+                padding: 10px;
+            }
+            .price-config {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (min-width: 1920px) {
+            .price-config {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+        }
+        
+        @media (min-width: 2560px) {
+            .price-config {
+                grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .toolbar {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .product-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .product-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .product-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .btn-icon {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .price-config {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .region-config {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px;
+            min-width: 200px;
+        }
+
+        .region-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            font-size: 16px;
+        }
+
+        .region-label::before {
+            content: '';
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #667eea;
+        }
+        
+        .region-label-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+        }
+        
+        .region-delete-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .region-delete-btn:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        .price-type-selector {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .radio-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .radio-group input[type="radio"] {
+            cursor: pointer;
+            width: 14px;
+            height: 14px;
+        }
+        
+        .radio-group label {
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .price-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            padding: 3px 4px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 15px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .fixed-price-input {
+            padding: 3px 4px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 15px;
+            width: 100%;
+        }
+
+        .fixed-price-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .add-product-form {
+            background: #e7f3ff;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .status-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s;
+        }
+
+        .status-success {
+            background: #28a745;
+        }
+
+        .status-error {
+            background: #dc3545;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .tips {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .tips-title {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 8px;
+        }
+
+        .tips-content {
+            font-size: 14px;
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .tips-content ul {
+            margin-left: 20px;
+            margin-top: 8px;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-results {
+            font-size: 14px;
+            color: #6c757d;
+            margin-left: 10px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+            padding: 20px 0;
+        }
+
+        .pagination-info {
+            color: #6c757d;
+            font-size: 14px;
+            margin: 0 10px;
+        }
+
+        .page-btn {
+            padding: 8px 16px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 20px;
+        }
+
+        .page-size-selector select {
+            padding: 6px 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* 模态对话框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: #f8f9fa;
+            color: #333;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 15px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .form-item {
+            margin-bottom: 20px;
+        }
+
+        .form-item label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-item input[type="text"],
+        .form-item input[type="number"] {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-item input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .price-config-section {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .price-config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .price-config-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: #495057;
+        }
+
+        .price-type-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .price-type-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .price-type-toggle input[type="radio"] {
+            width: 16px;
+            height: 16px;
+        }
+
+        .price-inputs-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .price-inputs-group .form-item {
+            margin: 0;
+        }
+
+        .price-inputs-group .form-item input {
+            width: 100%;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Excel价格配置编辑器</h1>
+            <p>可视化编辑价格配置文件，支持固定价格和价格区间</p>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn-primary" onclick="addNewProduct()">➕ 添加产品</button>
+            <button class="btn btn-primary" onclick="showAddRegionModalGlobal()" style="margin-left: 10px;">🌍 添加地域</button>
+            <button class="btn btn-danger" onclick="showRemoveRegionModal()" style="margin-left: 10px;">❌ 删除地域</button>
+            <button class="btn btn-success" onclick="saveConfig()">💾 保存配置</button>
+            <button class="btn btn-secondary" onclick="loadConfig()">📂 导入配置</button>
+            <button class="btn btn-secondary" onclick="exportConfig()">💾 导出配置</button>
+            <input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleFileImport(event)">
+            <input type="file" id="exportInput" accept=".json" style="display:none" onchange="handleFileExport(event)">
+        </div>
+
+        <div class="content">
+            <div class="tips">
+                <div class="tips-title">💡 配置说明</div>
+                <div class="tips-content">
+                    <strong>价格类型：</strong>
+                    <ul>
+                        <li><strong>固定价格</strong>：所有产品使用统一价格</li>
+                        <li><strong>价格区间</strong>：在指定范围内随机生成符合步长要求的价格</li>
+                    </ul>
+                    <strong>步长要求：</strong>HK和MY推荐使用10的倍数，SG推荐使用5的倍数。最小值必须是步长的倍数。
+                </div>
+            </div>
+
+            <div class="search-bar">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜索产品名称..." onkeyup="handleSearch()">
+                <span class="search-results" id="searchResults"></span>
+            </div>
+
+            <div id="productsList"></div>
+
+            <div class="pagination">
+                <button class="page-btn" onclick="goToPage(currentPage - 1)" id="prevBtn">‹ 上一页</button>
+                <span class="pagination-info" id="pageInfo">第 1 页，共 1 页</span>
+                <button class="page-btn" onclick="goToPage(currentPage + 1)" id="nextBtn">下一页 ›</button>
+                <div class="page-size-selector">
+                    <span>每页显示:</span>
+                    <select id="pageSizeSelect" onchange="changePageSize()">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="statusMessage"></div>
+        </div>
+    </div>
+
+    <!-- 添加产品模态对话框 -->
+    <div id="addProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">➕ 添加新产品</h2>
+                <button class="modal-close" onclick="closeAddProductModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-item">
+                    <label for="newProductName">产品名称：</label>
+                    <input type="text" id="newProductName" placeholder="请输入产品名称">
+                </div>
+                
+                <div class="form-item">
+                    <label>选择地域：</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="region_hk" value="hk" checked>
+                            <label for="region_hk">HK (香港)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="region_sg" value="sg" checked>
+                            <label for="region_sg">SG (新加坡)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="region_my" value="my" checked>
+                            <label for="region_my">MY (马来西亚)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="regionsConfig"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddProductModal()">取消</button>
+                <button class="btn btn-primary" onclick="submitNewProduct()">确认添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加地域模态对话框 -->
+    <div id="addRegionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">➕ 添加地域配置</h2>
+                <button class="modal-close" onclick="closeAddRegionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    请输入地域名称（英文，全小写），将为所有产品添加该地域配置
+                </div>
+                
+                <div class="form-item">
+                    <label>地域名称：</label>
+                    <input type="text" id="newRegionName" placeholder="例如：hk, sg, my, tw, jp..." style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddRegionModal()">取消</button>
+                <button class="btn btn-primary" onclick="submitAddRegion()">确认添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除地域模态对话框 -->
+    <div id="removeRegionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">❌ 删除地域配置</h2>
+                <button class="modal-close" onclick="closeRemoveRegionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    勾选要保留的地域，未勾选的将被删除
+                </div>
+                
+                <div class="form-item">
+                    <label>选择要保留的地域：</label>
+                    <div id="regionsToKeep" class="checkbox-group"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeRemoveRegionModal()">取消</button>
+                <button class="btn btn-danger" onclick="submitRemoveRegion()">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let config = {};
+        let currentPage = 1;
+        let pageSize = 10;
+        let searchKeyword = '';
+        let currentEditingProduct = null;
+
+        // 初始化
+        function init() {
+            loadConfigFromServer();
+        }
+
+        // 从服务器加载配置
+        function loadConfigFromServer() {
+            fetch('/api/config')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showMessage('加载配置失败: ' + data.error, 'error');
+                        config = {};
+                    } else {
+                        config = data;
+                    }
+                    renderProducts();
+                })
+                .catch(error => {
+                    console.error('加载配置失败:', error);
+                    showMessage('加载配置失败', 'error');
+                    config = {};
+                });
+        }
+
+        // 渲染产品列表
+        function renderProducts() {
+            const container = document.getElementById('productsList');
+            container.innerHTML = '';
+
+            // 获取所有产品并过滤
+            let products = Object.keys(config);
+            
+            // 搜索过滤
+            if (searchKeyword) {
+                products = products.filter(p => p.toLowerCase().includes(searchKeyword.toLowerCase()));
+            }
+
+            // 更新搜索结果提示
+            const searchResults = document.getElementById('searchResults');
+            if (searchKeyword) {
+                searchResults.textContent = `找到 ${products.length} 个产品`;
+            } else {
+                searchResults.textContent = '';
+            }
+
+            // 空状态
+            if (products.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <p>${searchKeyword ? '未找到匹配的产品' : '还没有添加任何产品配置'}</p>
+                        <p style="margin-top: 10px; color: #999;">${searchKeyword ? '尝试其他搜索关键词' : '点击上方"添加产品"按钮开始配置'}</p>
+                    </div>
+                `;
+                updatePagination(0);
+                return;
+            }
+
+            // 计算分页
+            const totalPages = Math.ceil(products.length / pageSize);
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, products.length);
+            const pageProducts = products.slice(startIndex, endIndex);
+
+            // 渲染当前页的产品
+            pageProducts.forEach((productName) => {
+                container.appendChild(createProductCard(productName, config[productName], 0));
+            });
+
+            // 更新分页
+            updatePagination(products.length);
+        }
+
+        // 更新分页显示
+        function updatePagination(totalCount) {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            
+            // 更新分页信息
+            const pageInfo = document.getElementById('pageInfo');
+            if (totalPages > 0) {
+                pageInfo.textContent = `第 ${currentPage} 页，共 ${totalPages} 页 (共 ${totalCount} 个产品)`;
+            } else {
+                pageInfo.textContent = '第 0 页，共 0 页 (共 0 个产品)';
+            }
+
+            // 更新按钮状态
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+        }
+
+        // 跳转到指定页
+        function goToPage(page) {
+            const totalProducts = searchKeyword ? 
+                Object.keys(config).filter(p => p.toLowerCase().includes(searchKeyword.toLowerCase())).length :
+                Object.keys(config).length;
+            const totalPages = Math.ceil(totalProducts / pageSize);
+            
+            if (page < 1 || page > totalPages) {
+                return;
+            }
+            
+            currentPage = page;
+            renderProducts();
+        }
+
+        // 改变每页显示数量
+        function changePageSize() {
+            pageSize = parseInt(document.getElementById('pageSizeSelect').value);
+            currentPage = 1;
+            renderProducts();
+        }
+
+        // 处理搜索
+        function handleSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchKeyword = searchInput.value.trim();
+            currentPage = 1;
+            renderProducts();
+        }
+
+        // 创建产品卡片
+        function createProductCard(productName, productConfig, index) {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            
+            // 动态获取所有地域
+            const regions = Object.keys(productConfig);
+            const regionHTML = regions.map(region => 
+                createRegionConfig(productName, region, productConfig[region])
+            ).join('');
+            
+            card.innerHTML = `
+                <div class="product-header">
+                    <div class="product-name">${productName}</div>
+                    <button class="btn btn-danger btn-icon" onclick="removeProduct('${productName}')">✕ 删除</button>
+                </div>
+                <div class="price-config">
+                    ${regionHTML}
+                </div>
+            `;
+            return card;
+        }
+
+        // 创建地区配置
+        function createRegionConfig(productName, region, regionConfig) {
+            const isFixed = typeof regionConfig === 'number';
+            const regionName = region.toUpperCase();
+            const defaultRanges = {
+                'hk': { min: 500, max: 600, step: 10 },
+                'sg': { min: 70, max: 100, step: 5 },
+                'my': { min: 50, max: 70, step: 10 },
+                'tw': { min: 500, max: 600, step: 10 },
+                'mo': { min: 500, max: 600, step: 10 },
+                'jp': { min: 800, max: 1000, step: 10 },
+                'kr': { min: 800, max: 1000, step: 10 },
+                'id': { min: 50, max: 70, step: 10 },
+                'th': { min: 50, max: 70, step: 10 },
+                'ph': { min: 50, max: 70, step: 10 },
+                'vn': { min: 50, max: 70, step: 10 }
+            };
+            const range = defaultRanges[region] || { min: 100, max: 200, step: 10 };
+
+            const [min, max, step] = isFixed ? [range.min, range.max, range.step] : regionConfig;
+
+            return `
+                <div class="region-config">
+                    <div class="region-label">
+                        <div class="region-label-wrapper">
+                            <span>${regionName}</span>
+                        </div>
+                    </div>
+                    <div class="price-type-selector">
+                        <div class="radio-group">
+                            <input type="radio" id="${productName}_${region}_fixed" name="${productName}_${region}_type" ${isFixed ? 'checked' : ''} 
+                                   onchange="updatePriceType('${productName}', '${region}', 'fixed')">
+                            <label for="${productName}_${region}_fixed">固定价格</label>
+                        </div>
+                        <div class="radio-group">
+                            <input type="radio" id="${productName}_${region}_range" name="${productName}_${region}_type" ${!isFixed ? 'checked' : ''}
+                                   onchange="updatePriceType('${productName}', '${region}', 'range')">
+                            <label for="${productName}_${region}_range">价格区间</label>
+                        </div>
+                    </div>
+                    ${isFixed ? `
+                        <input type="number" class="fixed-price-input" value="${regionConfig}" 
+                               onchange="updateFixedPrice('${productName}', '${region}', this.value)">
+                    ` : `
+                        <div class="price-input-group">
+                            <div class="input-group">
+                                <label>最小值</label>
+                                <input type="number" value="${min}" 
+                                       onchange="updateRangePrice('${productName}', '${region}', 'min', this.value)">
+                            </div>
+                            <div class="input-group">
+                                <label>最大值</label>
+                                <input type="number" value="${max}" 
+                                       onchange="updateRangePrice('${productName}', '${region}', 'max', this.value)">
+                            </div>
+                            <div class="input-group">
+                                <label>步长</label>
+                                <input type="number" value="${step}" 
+                                       onchange="updateRangePrice('${productName}', '${region}', 'step', this.value)">
+                            </div>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        // 更新价格类型
+        function updatePriceType(productName, region, type) {
+            if (type === 'fixed') {
+                const defaults = { 
+                    'hk': 100, 'sg': 50, 'my': 50, 'tw': 100, 'mo': 100,
+                    'jp': 800, 'kr': 800, 'id': 50, 'th': 50, 'ph': 50, 'vn': 50
+                };
+                config[productName][region] = defaults[region] || 100;
+            } else {
+                const defaults = {
+                    'hk': [100, 200, 10], 'sg': [50, 100, 5], 'my': [50, 100, 10],
+                    'tw': [100, 200, 10], 'mo': [100, 200, 10],
+                    'jp': [800, 1000, 10], 'kr': [800, 1000, 10],
+                    'id': [50, 100, 10], 'th': [50, 100, 10], 'ph': [50, 100, 10], 'vn': [50, 100, 10]
+                };
+                config[productName][region] = [...(defaults[region] || [100, 200, 10])];
+            }
+            renderProducts();
+            saveToServer();
+        }
+
+        // 更新固定价格
+        function updateFixedPrice(productName, region, value) {
+            config[productName][region] = parseInt(value) || 0;
+            saveToServer();
+        }
+
+        // 更新区间价格
+        function updateRangePrice(productName, region, field, value) {
+            const idx = field === 'min' ? 0 : field === 'max' ? 1 : 2;
+            config[productName][region][idx] = parseInt(value) || 0;
+            saveToServer();
+        }
+
+        // 打开添加产品模态框
+        function addNewProduct() {
+            document.getElementById('addProductModal').classList.add('show');
+            document.getElementById('newProductName').value = '';
+            
+            // 重置地域选择
+            const checkboxes = ['region_hk', 'region_sg', 'region_my'];
+            checkboxes.forEach(id => {
+                const checkbox = document.getElementById(id);
+                checkbox.checked = true;
+                checkbox.onchange = renderRegionsConfig;
+            });
+            
+            // 渲染地域配置
+            renderRegionsConfig();
+        }
+        
+        // 关闭添加产品模态框
+        function closeAddProductModal() {
+            document.getElementById('addProductModal').classList.remove('show');
+        }
+        
+        // 点击模态框外部关闭
+        document.addEventListener('click', function(event) {
+            const addProductModal = document.getElementById('addProductModal');
+            const addRegionModal = document.getElementById('addRegionModal');
+            const removeRegionModal = document.getElementById('removeRegionModal');
+            
+            if (event.target === addProductModal) {
+                closeAddProductModal();
+            }
+            if (event.target === addRegionModal) {
+                closeAddRegionModal();
+            }
+            if (event.target === removeRegionModal) {
+                closeRemoveRegionModal();
+            }
+        });
+        
+        // 渲染地域配置
+        function renderRegionsConfig() {
+            const container = document.getElementById('regionsConfig');
+            container.innerHTML = '';
+            
+            const regions = ['hk', 'sg', 'my'];
+            const defaults = {
+                'hk': { min: 500, max: 600, step: 10, fixed: 500 },
+                'sg': { min: 70, max: 100, step: 5, fixed: 70 },
+                'my': { min: 50, max: 70, step: 10, fixed: 50 }
+            };
+            
+            regions.forEach(region => {
+                const checkbox = document.getElementById(`region_${region}`);
+                if (!checkbox.checked) return;
+                
+                const def = defaults[region];
+                const regionConfig = document.createElement('div');
+                regionConfig.className = 'price-config-section';
+                regionConfig.innerHTML = `
+                    <div class="price-config-header">
+                        <div class="price-config-title">${region.toUpperCase()}</div>
+                        <div class="price-type-toggle">
+                            <label>
+                                <input type="radio" name="price_type_${region}" value="fixed" checked 
+                                       onchange="togglePriceType('${region}')">
+                                固定价格
+                            </label>
+                            <label>
+                                <input type="radio" name="price_type_${region}" value="range" 
+                                       onchange="togglePriceType('${region}')">
+                                价格区间
+                            </label>
+                        </div>
+                    </div>
+                    <div id="price_config_${region}">
+                        <div class="form-item">
+                            <input type="number" id="${region}_fixed_price" value="${def.fixed}" 
+                                   placeholder="固定价格">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(regionConfig);
+            });
+        }
+        
+        // 切换价格类型
+        function togglePriceType(region) {
+            const container = document.getElementById(`price_config_${region}`);
+            const fixedType = document.querySelector(`input[name="price_type_${region}"][value="fixed"]`).checked;
+            const defaults = {
+                'hk': { min: 500, max: 600, step: 10, fixed: 500 },
+                'sg': { min: 70, max: 100, step: 5, fixed: 70 },
+                'my': { min: 50, max: 70, step: 10, fixed: 50 },
+                'tw': { min: 500, max: 600, step: 10, fixed: 500 },
+                'mo': { min: 500, max: 600, step: 10, fixed: 500 },
+                'jp': { min: 800, max: 1000, step: 10, fixed: 800 },
+                'kr': { min: 800, max: 1000, step: 10, fixed: 800 },
+                'id': { min: 50, max: 70, step: 10, fixed: 50 },
+                'th': { min: 50, max: 70, step: 10, fixed: 50 },
+                'ph': { min: 50, max: 70, step: 10, fixed: 50 },
+                'vn': { min: 50, max: 70, step: 10, fixed: 50 }
+            };
+            const def = defaults[region] || { min: 100, max: 200, step: 10, fixed: 100 };
+            
+            if (fixedType) {
+                container.innerHTML = `
+                    <div class="form-item">
+                        <input type="number" id="${region}_fixed_price" value="${def.fixed}" 
+                               placeholder="固定价格">
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="price-inputs-group">
+                        <div class="form-item">
+                            <label>最小值</label>
+                            <input type="number" id="${region}_min" value="${def.min}">
+                        </div>
+                        <div class="form-item">
+                            <label>最大值</label>
+                            <input type="number" id="${region}_max" value="${def.max}">
+                        </div>
+                        <div class="form-item">
+                            <label>步长</label>
+                            <input type="number" id="${region}_step" value="${def.step}">
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // 提交新产品
+        function submitNewProduct() {
+            const productName = document.getElementById('newProductName').value.trim();
+            
+            if (!productName) {
+                showMessage('请输入产品名称！', 'error');
+                return;
+            }
+            
+            if (config[productName]) {
+                showMessage('该产品已存在！', 'error');
+                return;
+            }
+            
+            // 检查至少选择一个地域
+            const hasHK = document.getElementById('region_hk').checked;
+            const hasSG = document.getElementById('region_sg').checked;
+            const hasMY = document.getElementById('region_my').checked;
+            
+            if (!hasHK && !hasSG && !hasMY) {
+                showMessage('至少需要选择一个地域！', 'error');
+                return;
+            }
+            
+            // 构建配置
+            const newConfig = {};
+            
+            if (hasHK) {
+                const fixedType = document.querySelector('input[name="price_type_hk"][value="fixed"]').checked;
+                if (fixedType) {
+                    newConfig.hk = parseInt(document.getElementById('hk_fixed_price').value) || 500;
+                } else {
+                    const min = parseInt(document.getElementById('hk_min').value) || 500;
+                    const max = parseInt(document.getElementById('hk_max').value) || 600;
+                    const step = parseInt(document.getElementById('hk_step').value) || 10;
+                    newConfig.hk = [min, max, step];
+                }
+            }
+            
+            if (hasSG) {
+                const fixedType = document.querySelector('input[name="price_type_sg"][value="fixed"]').checked;
+                if (fixedType) {
+                    newConfig.sg = parseInt(document.getElementById('sg_fixed_price').value) || 70;
+                } else {
+                    const min = parseInt(document.getElementById('sg_min').value) || 70;
+                    const max = parseInt(document.getElementById('sg_max').value) || 100;
+                    const step = parseInt(document.getElementById('sg_step').value) || 5;
+                    newConfig.sg = [min, max, step];
+                }
+            }
+            
+            if (hasMY) {
+                const fixedType = document.querySelector('input[name="price_type_my"][value="fixed"]').checked;
+                if (fixedType) {
+                    newConfig.my = parseInt(document.getElementById('my_fixed_price').value) || 50;
+                } else {
+                    const min = parseInt(document.getElementById('my_min').value) || 50;
+                    const max = parseInt(document.getElementById('my_max').value) || 70;
+                    const step = parseInt(document.getElementById('my_step').value) || 10;
+                    newConfig.my = [min, max, step];
+                }
+            }
+            
+            // 添加到配置
+            config[productName] = newConfig;
+            
+            // 渲染并保存
+            renderProducts();
+            saveToServer();
+            closeAddProductModal();
+            showMessage('产品添加成功！', 'success');
+        }
+
+        // 删除产品
+        function removeProduct(productName) {
+            if (confirm(`确定要删除产品 "${productName}" 吗？`)) {
+                delete config[productName];
+                renderProducts();
+                saveToServer();
+                showMessage('产品删除成功！', 'success');
+            }
+        }
+        
+        // 显示删除地域模态框
+        function showRemoveRegionModal() {
+            const allRegions = new Set();
+            
+            // 获取所有产品已有的地域
+            Object.values(config).forEach(productConfig => {
+                Object.keys(productConfig).forEach(region => {
+                    allRegions.add(region);
+                });
+            });
+            
+            if (allRegions.size === 0) {
+                showMessage('没有可删除的地域！', 'error');
+                return;
+            }
+            
+            // 渲染地域复选框
+            const container = document.getElementById('regionsToKeep');
+            container.innerHTML = '';
+            
+            Array.from(allRegions).sort().forEach(region => {
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'checkbox-item';
+                checkboxItem.innerHTML = `
+                    <input type="checkbox" id="keep_region_${region}" value="${region}" checked>
+                    <label for="keep_region_${region}">${region.toUpperCase()}</label>
+                `;
+                container.appendChild(checkboxItem);
+            });
+            
+            // 显示模态框
+            document.getElementById('removeRegionModal').classList.add('show');
+        }
+        
+        // 关闭删除地域模态框
+        function closeRemoveRegionModal() {
+            document.getElementById('removeRegionModal').classList.remove('show');
+        }
+        
+        // 提交删除地域
+        function submitRemoveRegion() {
+            const allRegions = new Set();
+            Object.values(config).forEach(productConfig => {
+                Object.keys(productConfig).forEach(region => {
+                    allRegions.add(region);
+                });
+            });
+            
+            // 获取要保留的地域
+            const regionsToKeep = new Set();
+            Array.from(allRegions).forEach(region => {
+                const checkbox = document.getElementById(`keep_region_${region}`);
+                if (checkbox && checkbox.checked) {
+                    regionsToKeep.add(region);
+                }
+            });
+            
+            // 找出要删除的地域
+            const regionsToDelete = Array.from(allRegions).filter(region => !regionsToKeep.has(region));
+            
+            if (regionsToDelete.length === 0) {
+                showMessage('没有要删除的地域！', 'error');
+                return;
+            }
+            
+            // 确认删除
+            const deleteList = regionsToDelete.map(r => r.toUpperCase()).join('、');
+            if (confirm(`确定要删除以下地域吗？\n\n${deleteList}\n\n这将删除所有产品的该地域配置。`)) {
+                let totalDeleted = 0;
+                regionsToDelete.forEach(region => {
+                    Object.keys(config).forEach(productName => {
+                        if (config[productName][region]) {
+                            delete config[productName][region];
+                            totalDeleted++;
+                        }
+                    });
+                });
+                
+                renderProducts();
+                saveToServer();
+                showMessage(`成功删除 ${totalDeleted} 个地域配置！`, 'success');
+                closeRemoveRegionModal();
+            }
+        }
+        
+        // 打开全局添加地域模态框
+        function showAddRegionModalGlobal() {
+            document.getElementById('addRegionModal').classList.add('show');
+            document.getElementById('newRegionName').value = '';
+        }
+        
+        // 关闭添加地域模态框
+        function closeAddRegionModal() {
+            document.getElementById('addRegionModal').classList.remove('show');
+        }
+        
+        // 提交添加地域（应用到所有产品）
+        function submitAddRegion() {
+            const regionName = document.getElementById('newRegionName').value.trim().toLowerCase();
+            
+            if (!regionName) {
+                showMessage('请输入地域名称！', 'error');
+                return;
+            }
+            
+            // 验证地域名称（只能包含小写字母、数字和下划线）
+            if (!/^[a-z0-9_]+$/.test(regionName)) {
+                showMessage('地域名称只能包含小写字母、数字和下划线！', 'error');
+                return;
+            }
+            
+            // 检查是否有产品
+            const productCount = Object.keys(config).length;
+            if (productCount === 0) {
+                showMessage('请先添加产品！', 'error');
+                closeAddRegionModal();
+                return;
+            }
+            
+            // 检查地域是否已存在
+            const allRegions = new Set();
+            Object.values(config).forEach(productConfig => {
+                Object.keys(productConfig).forEach(region => {
+                    allRegions.add(region);
+                });
+            });
+            
+            if (allRegions.has(regionName)) {
+                showMessage(`地域 "${regionName}" 已存在！`, 'error');
+                return;
+            }
+            
+            // 设置默认价格（根据地域名判断）
+            let defaultPrice;
+            if (regionName === 'hk' || regionName === 'tw' || regionName === 'mo') {
+                defaultPrice = 500;
+            } else if (regionName === 'sg') {
+                defaultPrice = 70;
+            } else if (regionName === 'my' || regionName === 'id' || regionName === 'th' || regionName === 'ph' || regionName === 'vn') {
+                defaultPrice = 50;
+            } else if (regionName === 'jp' || regionName === 'kr') {
+                defaultPrice = 800;
+            } else {
+                defaultPrice = 100;
+            }
+            
+            // 应用到所有产品
+            let addedCount = 0;
+            Object.keys(config).forEach(productName => {
+                if (!config[productName][regionName]) {
+                    config[productName][regionName] = defaultPrice;
+                    addedCount++;
+                }
+            });
+            
+            if (addedCount === 0) {
+                showMessage('所有产品都已包含该地域，未添加任何地域', 'error');
+            } else {
+                renderProducts();
+                saveToServer();
+                closeAddRegionModal();
+                showMessage(`成功为 ${addedCount} 个产品添加了地域 "${regionName.toUpperCase()}"！`, 'success');
+            }
+        }
+
+        // 保存到服务器
+        function saveToServer() {
+            fetch('/api/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // showMessage('配置已保存', 'success');
+                } else {
+                    showMessage('保存失败: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('保存失败:', error);
+                showMessage('保存失败', 'error');
+            });
+        }
+
+        // 保存配置（触发保存）
+        function saveConfig() {
+            saveToServer();
+            showMessage('配置已保存到 config.json', 'success');
+        }
+
+        // 导出配置
+        function exportConfig() {
+            document.getElementById('exportInput').click();
+        }
+
+        // 处理文件导出
+        function handleFileExport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    config = JSON.parse(e.target.result);
+                    renderProducts();
+                    showMessage('配置导入成功！', 'success');
+                } catch (error) {
+                    showMessage('配置格式错误！', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 导入配置
+        function loadConfig() {
+            document.getElementById('fileInput').click();
+        }
+
+        // 处理文件导入
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    Object.keys(config).forEach(key => delete config[key]);
+                    Object.assign(config, imported);
+                    renderProducts();
+                    saveToServer();
+                    showMessage('配置导入成功！', 'success');
+                } catch (error) {
+                    showMessage('配置格式错误！', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 显示消息
+        function showMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>

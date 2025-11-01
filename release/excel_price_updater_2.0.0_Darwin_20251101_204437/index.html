@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel价格批量更新系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            background: white;
+            width: 100%;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 18px;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 60px 40px;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9fa;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e7f1ff;
+        }
+
+        .upload-icon {
+            font-size: 64px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .file-list {
+            margin-top: 20px;
+        }
+
+        .file-item {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-name {
+            font-size: 16px;
+            color: #333;
+            flex: 1;
+        }
+
+        .file-size {
+            font-size: 14px;
+            color: #6c757d;
+            margin-right: 15px;
+        }
+
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .btn-remove:hover {
+            background: #c82333;
+        }
+
+        .region-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .region-option {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid #dee2e6;
+            transition: all 0.3s;
+        }
+
+        .region-option:hover {
+            border-color: #667eea;
+        }
+
+        .region-option.selected {
+            border-color: #667eea;
+            background: #e7f1ff;
+        }
+
+        .region-checkbox {
+            display: none;
+        }
+
+        .region-label {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            display: block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-section {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 30px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .log-area {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .log-item {
+            margin-bottom: 8px;
+        }
+
+        .log-success {
+            color: #68d391;
+        }
+
+        .log-error {
+            color: #fc8181;
+        }
+
+        .log-info {
+            color: #63b3ed;
+        }
+
+        .message {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        iframe {
+            width: 100%;
+            height: calc(100vh - 160px);
+            border: none;
+        }
+        
+        #config-tab {
+            padding: 0 !important;
+        }
+
+        /* 小屏幕（手机） */
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .header p {
+                font-size: 14px;
+            }
+
+            .tab {
+                font-size: 14px;
+                padding: 15px 10px;
+            }
+
+            .tab-content {
+                padding: 15px;
+            }
+
+            .section {
+                padding: 20px;
+            }
+
+            .section-title {
+                font-size: 20px;
+            }
+
+            .region-selector {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                gap: 10px;
+            }
+
+            .upload-area {
+                padding: 40px 20px;
+            }
+        }
+
+        /* 中等屏幕（平板） */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .header {
+                padding: 30px;
+            }
+
+            .tab-content {
+                padding: 30px;
+            }
+
+            .section {
+                padding: 25px;
+            }
+        }
+
+        /* 大屏幕（桌面） */
+        @media (min-width: 1025px) and (max-width: 1920px) {
+            .header {
+                padding: 40px;
+            }
+
+            .tab-content {
+                padding: 40px;
+            }
+
+            .section {
+                padding: 30px;
+            }
+        }
+
+        /* 超大屏幕（2K+） */
+        @media (min-width: 1921px) {
+            .header {
+                padding: 50px;
+            }
+
+            .header h1 {
+                font-size: 42px;
+            }
+
+            .header p {
+                font-size: 18px;
+            }
+
+            .tab {
+                font-size: 20px;
+                padding: 25px;
+            }
+
+            .tab-content {
+                padding: 50px;
+            }
+
+            .section {
+                padding: 35px;
+            }
+
+            .section-title {
+                font-size: 28px;
+            }
+
+            .upload-text {
+                font-size: 20px;
+            }
+
+            .region-label {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Excel价格批量更新系统</h1>
+            <p>可视化配置编辑 + 批量价格更新 一体化平台</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('process')">📈 价格更新</button>
+            <button class="tab" onclick="switchTab('config')">⚙️ 配置管理</button>
+        </div>
+
+        <!-- 价格更新标签页 -->
+        <div id="process-tab" class="tab-content active">
+            <div class="section">
+                <div class="section-title">
+                    <span>📁</span>
+                    <span>上传Excel文件</span>
+                </div>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">☁️</div>
+                    <div class="upload-text">点击或拖拽文件到这里上传</div>
+                    <div class="upload-hint">支持 .xlsx, .xls 格式，可同时上传多个文件</div>
+                </div>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" multiple style="display: none;">
+                
+                <div class="file-list" id="fileList"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span>🌍</span>
+                    <span>选择更新地域</span>
+                </div>
+                <div class="region-selector" id="regionSelector"></div>
+            </div>
+
+            <div id="messageArea" class="message"></div>
+
+            <button class="btn-primary" id="processBtn" onclick="processFiles()" disabled>
+                🚀 开始更新价格
+            </button>
+
+            <div class="progress-section" id="progressSection">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+                <div class="log-area" id="logArea"></div>
+            </div>
+        </div>
+
+        <!-- 配置管理标签页 -->
+        <div id="config-tab" class="tab-content">
+            <iframe src="config_editor.html" id="configFrame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        let uploadedFiles = [];
+        let selectedRegions = [];
+        let availableRegions = [];
+
+        // 页面加载时初始化
+        window.onload = function() {
+            loadAvailableRegions();
+            setupDragDrop();
+        };
+
+        // 切换标签页
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // 加载可用地域
+        async function loadAvailableRegions() {
+            try {
+                const response = await fetch('/api/regions');
+                const data = await response.json();
+                availableRegions = data.regions || ['hk', 'sg', 'my'];
+                renderRegionSelector();
+            } catch (error) {
+                console.error('加载地域失败:', error);
+                availableRegions = ['hk', 'sg', 'my'];
+                renderRegionSelector();
+            }
+        }
+
+        // 渲染地域选择器
+        function renderRegionSelector() {
+            const container = document.getElementById('regionSelector');
+            container.innerHTML = '';
+            
+            availableRegions.forEach(region => {
+                const option = document.createElement('div');
+                option.className = 'region-option';
+                option.onclick = () => toggleRegion(region, option);
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `region-${region}`;
+                checkbox.className = 'region-checkbox';
+                checkbox.value = region;
+                
+                const label = document.createElement('label');
+                label.className = 'region-label';
+                label.textContent = region.toUpperCase();
+                
+                option.appendChild(checkbox);
+                option.appendChild(label);
+                container.appendChild(option);
+            });
+        }
+
+        // 切换地域选择
+        function toggleRegion(region, element) {
+            const checkbox = element.querySelector('input');
+            checkbox.checked = !checkbox.checked;
+            element.classList.toggle('selected');
+            
+            if (checkbox.checked) {
+                selectedRegions.push(region);
+            } else {
+                selectedRegions = selectedRegions.filter(r => r !== region);
+            }
+            
+            updateProcessButton();
+        }
+
+        // 设置拖拽上传
+        function setupDragDrop() {
+            const uploadArea = document.getElementById('uploadArea');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.add('dragover');
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.remove('dragover');
+                }, false);
+            });
+            
+            uploadArea.addEventListener('drop', handleDrop, false);
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect, false);
+        }
+
+        // 处理拖拽上传
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        // 处理文件选择
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        // 处理文件
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    uploadedFiles.push(file);
+                } else {
+                    showMessage(`文件 ${file.name} 格式不支持`, 'error');
+                }
+            });
+            renderFileList();
+            updateProcessButton();
+        }
+
+        // 渲染文件列表
+        function renderFileList() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            
+            uploadedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileName = document.createElement('div');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name;
+                
+                const fileSize = document.createElement('div');
+                fileSize.className = 'file-size';
+                fileSize.textContent = formatFileSize(file.size);
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn-remove';
+                removeBtn.textContent = '移除';
+                removeBtn.onclick = () => removeFile(index);
+                
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(fileSize);
+                fileItem.appendChild(removeBtn);
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        // 移除文件
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            renderFileList();
+            updateProcessButton();
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        // 更新处理按钮状态
+        function updateProcessButton() {
+            const btn = document.getElementById('processBtn');
+            btn.disabled = uploadedFiles.length === 0 || selectedRegions.length === 0;
+        }
+
+        // 显示消息
+        function showMessage(text, type) {
+            const messageArea = document.getElementById('messageArea');
+            messageArea.textContent = text;
+            messageArea.className = `message ${type} show`;
+            
+            setTimeout(() => {
+                messageArea.classList.remove('show');
+            }, 5000);
+        }
+
+        // 添加日志
+        function addLog(text, type = 'info') {
+            const logArea = document.getElementById('logArea');
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${type}`;
+            logItem.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            logArea.appendChild(logItem);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // 处理文件
+        async function processFiles() {
+            if (uploadedFiles.length === 0 || selectedRegions.length === 0) {
+                showMessage('请上传文件并选择地域', 'error');
+                return;
+            }
+
+            const progressSection = document.getElementById('progressSection');
+            const progressFill = document.getElementById('progressFill');
+            const logArea = document.getElementById('logArea');
+            const processBtn = document.getElementById('processBtn');
+
+            progressSection.style.display = 'block';
+            logArea.innerHTML = '';
+            processBtn.disabled = true;
+
+            addLog('开始处理文件...', 'info');
+
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                const progress = ((i + 1) / uploadedFiles.length) * 100;
+                
+                progressFill.style.width = progress + '%';
+                progressFill.textContent = Math.round(progress) + '%';
+
+                addLog(`正在处理: ${file.name}`, 'info');
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('regions', JSON.stringify(selectedRegions));
+
+                    const response = await fetch('/api/process', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        addLog(`✓ ${file.name} 处理成功！更新了 ${result.updated_count} 条记录`, 'success');
+                        
+                        // 下载处理后的文件
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = '/api/download/' + result.output_file;
+                        downloadLink.download = result.output_file;
+                        downloadLink.click();
+                    } else {
+                        addLog(`✗ ${file.name} 处理失败: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    addLog(`✗ ${file.name} 处理失败: ${error.message}`, 'error');
+                }
+            }
+
+            addLog('所有文件处理完成！', 'success');
+            showMessage('所有文件处理完成！', 'success');
+            processBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>
+

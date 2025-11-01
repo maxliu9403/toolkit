@@ -1,0 +1,32 @@
+# Python虚拟环境
+venv/
+env/
+ENV/
+
+# Python缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 临时文件
+*.tmp
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 生成的Excel文件
+*_updated.xlsx
+
+# 测试文件
+sample_products.xlsx
+create_sample_excel.py
+
