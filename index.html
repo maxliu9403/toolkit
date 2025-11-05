@@ -119,6 +119,18 @@
             background: #e7f1ff;
         }
 
+        .upload-area.disabled {
+            border-color: #dee2e6;
+            background: #f8f9fa;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .upload-area.disabled:hover {
+            border-color: #dee2e6;
+            background: #f8f9fa;
+        }
+
         .upload-icon {
             font-size: 64px;
             color: #667eea;
@@ -451,12 +463,59 @@
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('process')">📈 价格更新</button>
+            <button class="tab active" onclick="switchTab('browserid')">🔄 BrowserID替换</button>
+            <button class="tab" onclick="switchTab('process')">📈 价格更新</button>
             <button class="tab" onclick="switchTab('config')">⚙️ 配置管理</button>
         </div>
 
+        <!-- BrowserID替换标签页 -->
+        <div id="browserid-tab" class="tab-content active">
+            <div class="section">
+                <div class="section-title">
+                    <span>📊</span>
+                    <span>上传封号数据表</span>
+                </div>
+                <div class="upload-area" id="banUploadArea" onclick="handleBanUploadClick()">
+                    <div class="upload-icon">📋</div>
+                    <div class="upload-text">点击或拖拽封号数据表文件</div>
+                    <div class="upload-hint">支持 .xlsx, .xls 格式，需包含"封号ID"和"新对应ID"列（仅允许上传1个文件）</div>
+                </div>
+                <input type="file" id="banFileInput" accept=".xlsx,.xls" style="display: none;">
+                
+                <div class="file-list" id="banFileList"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span>📁</span>
+                    <span>上传目标Excel文件</span>
+                </div>
+                <div class="upload-area" id="targetUploadArea" onclick="document.getElementById('targetFileInput').click()">
+                    <div class="upload-icon">☁️</div>
+                    <div class="upload-text">点击或拖拽目标Excel文件</div>
+                    <div class="upload-hint">支持 .xlsx, .xls 格式，需包含"BrowserID"列，可同时上传多个文件</div>
+                </div>
+                <input type="file" id="targetFileInput" accept=".xlsx,.xls" multiple style="display: none;">
+                
+                <div class="file-list" id="targetFileList"></div>
+            </div>
+
+            <div id="browseridMessageArea" class="message"></div>
+
+            <button class="btn-primary" id="replaceBtn" onclick="replaceFiles()" disabled>
+                🚀 开始替换BrowserID
+            </button>
+
+            <div class="progress-section" id="browseridProgressSection">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="browseridProgressFill">0%</div>
+                </div>
+                <div class="log-area" id="browseridLogArea"></div>
+            </div>
+        </div>
+
         <!-- 价格更新标签页 -->
-        <div id="process-tab" class="tab-content active">
+        <div id="process-tab" class="tab-content">
             <div class="section">
                 <div class="section-title">
                     <span>📁</span>
@@ -504,11 +563,16 @@
         let uploadedFiles = [];
         let selectedRegions = [];
         let availableRegions = [];
+        
+        // BrowserID替换相关变量
+        let banFile = null;
+        let targetFiles = [];
 
         // 页面加载时初始化
         window.onload = function() {
             loadAvailableRegions();
             setupDragDrop();
+            setupBrowserIDDragDrop();
         };
 
         // 切换标签页
@@ -758,6 +822,365 @@
             addLog('所有文件处理完成！', 'success');
             showMessage('所有文件处理完成！', 'success');
             processBtn.disabled = false;
+        }
+
+        // ==================== BrowserID替换功能 ====================
+
+        // 阻止默认行为的辅助函数
+        function preventDefaultsBrowserID(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // 设置BrowserID替换的拖拽上传
+        function setupBrowserIDDragDrop() {
+            const banUploadArea = document.getElementById('banUploadArea');
+            const targetUploadArea = document.getElementById('targetUploadArea');
+            
+            // 设置封号数据表上传区
+            setupSingleFileDragDrop(banUploadArea, handleBanFileDrop);
+            document.getElementById('banFileInput').addEventListener('change', handleBanFileSelect, false);
+            
+            // 设置目标文件上传区
+            setupMultiFileDragDrop(targetUploadArea, handleTargetFileDrop);
+            document.getElementById('targetFileInput').addEventListener('change', handleTargetFileSelect, false);
+        }
+
+        // 设置单文件拖拽
+        function setupSingleFileDragDrop(uploadArea, dropHandler) {
+            // 只对拖拽事件阻止默认行为，不影响点击事件
+            uploadArea.addEventListener('dragenter', preventDefaultsBrowserID, false);
+            uploadArea.addEventListener('dragover', preventDefaultsBrowserID, false);
+            uploadArea.addEventListener('drop', preventDefaultsBrowserID, false);
+            
+            uploadArea.addEventListener('dragenter', () => {
+                uploadArea.classList.add('dragover');
+            }, false);
+            
+            uploadArea.addEventListener('dragover', () => {
+                uploadArea.classList.add('dragover');
+            }, false);
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            }, false);
+            
+            uploadArea.addEventListener('drop', (e) => {
+                uploadArea.classList.remove('dragover');
+                dropHandler(e);
+            }, false);
+        }
+
+        // 设置多文件拖拽
+        function setupMultiFileDragDrop(uploadArea, dropHandler) {
+            setupSingleFileDragDrop(uploadArea, dropHandler);
+        }
+
+        // 处理封号数据表拖拽
+        function handleBanFileDrop(e) {
+            // 如果已经有文件，阻止拖拽
+            if (banFile) {
+                showBrowserIDMessage('已有封号数据表，请使用"替换"或"移除"按钮', 'info');
+                return;
+            }
+            
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                // 只处理第一个文件
+                handleBanFile(files[0]);
+                if (files.length > 1) {
+                    showBrowserIDMessage(`检测到${files.length}个文件，仅使用第一个：${files[0].name}`, 'info');
+                }
+            }
+        }
+
+        // 处理封号数据表选择
+        function handleBanFileSelect(e) {
+            console.log('封号数据表文件选择事件触发', e.target.files);
+            const files = e.target.files;
+            if (files.length > 0) {
+                // 只处理第一个文件（虽然input没有multiple，但以防万一）
+                handleBanFile(files[0]);
+                // 不重置input.value，这样可以检测到同一文件的重新选择
+            }
+        }
+
+        // 处理点击封号数据表上传区域
+        function handleBanUploadClick() {
+            if (banFile) {
+                // 如果已经有文件，提示用户使用替换或移除按钮
+                showBrowserIDMessage('已有封号数据表，请使用"替换"或"移除"按钮', 'info');
+            } else {
+                // 如果没有文件，打开文件选择对话框
+                document.getElementById('banFileInput').click();
+            }
+        }
+
+        // 处理封号数据表文件
+        function handleBanFile(file) {
+            console.log('处理封号数据表文件:', file.name);
+            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                // 只保留最新上传的一个文件
+                banFile = file;
+                renderBanFileList();
+                updateReplaceButton();
+                updateBanUploadArea();
+                console.log('封号数据表文件已设置');
+                showBrowserIDMessage('封号数据表已上传成功', 'success');
+            } else {
+                showBrowserIDMessage(`文件 ${file.name} 格式不支持，请上传.xlsx或.xls文件`, 'error');
+            }
+        }
+
+        // 更新封号数据表上传区域的状态
+        function updateBanUploadArea() {
+            const uploadArea = document.getElementById('banUploadArea');
+            const uploadText = uploadArea.querySelector('.upload-text');
+            const uploadHint = uploadArea.querySelector('.upload-hint');
+            
+            if (banFile) {
+                // 禁用上传区域
+                uploadArea.classList.add('disabled');
+                uploadText.textContent = '已上传封号数据表';
+                uploadHint.textContent = '如需更换，请使用下方的"替换"或"移除"按钮';
+            } else {
+                // 启用上传区域
+                uploadArea.classList.remove('disabled');
+                uploadText.textContent = '点击或拖拽封号数据表文件';
+                uploadHint.textContent = '支持 .xlsx, .xls 格式，需包含"封号ID"和"新对应ID"列（仅允许上传1个文件）';
+            }
+        }
+
+        // 渲染封号数据表列表
+        function renderBanFileList() {
+            const fileList = document.getElementById('banFileList');
+            fileList.innerHTML = '';
+            
+            if (banFile) {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileIcon = document.createElement('div');
+                fileIcon.style.cssText = 'color: #667eea; font-size: 20px; margin-right: 10px;';
+                fileIcon.textContent = '📋';
+                
+                const fileName = document.createElement('div');
+                fileName.className = 'file-name';
+                fileName.textContent = banFile.name;
+                
+                const fileSize = document.createElement('div');
+                fileSize.className = 'file-size';
+                fileSize.textContent = formatFileSize(banFile.size);
+                
+                const replaceBtn = document.createElement('button');
+                replaceBtn.className = 'btn-remove';
+                replaceBtn.style.cssText = 'background: #ffc107; margin-right: 10px;';
+                replaceBtn.textContent = '替换';
+                replaceBtn.onclick = () => {
+                    document.getElementById('banFileInput').click();
+                };
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn-remove';
+                removeBtn.textContent = '移除';
+                removeBtn.onclick = () => {
+                    banFile = null;
+                    // 重置文件输入框
+                    document.getElementById('banFileInput').value = '';
+                    renderBanFileList();
+                    updateReplaceButton();
+                    updateBanUploadArea();
+                    showBrowserIDMessage('封号数据表已移除', 'info');
+                };
+                
+                fileItem.appendChild(fileIcon);
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(fileSize);
+                fileItem.appendChild(replaceBtn);
+                fileItem.appendChild(removeBtn);
+                fileList.appendChild(fileItem);
+            }
+        }
+
+        // 处理目标文件拖拽
+        function handleTargetFileDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleTargetFiles(files);
+        }
+
+        // 处理目标文件选择
+        function handleTargetFileSelect(e) {
+            console.log('目标文件选择事件触发', e.target.files);
+            const files = e.target.files;
+            handleTargetFiles(files);
+        }
+
+        // 处理目标文件
+        function handleTargetFiles(files) {
+            console.log('处理目标文件:', files.length, '个文件');
+            Array.from(files).forEach(file => {
+                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    targetFiles.push(file);
+                    console.log('添加目标文件:', file.name);
+                } else {
+                    showBrowserIDMessage(`文件 ${file.name} 格式不支持`, 'error');
+                }
+            });
+            renderTargetFileList();
+            updateReplaceButton();
+            console.log('当前目标文件总数:', targetFiles.length);
+        }
+
+        // 渲染目标文件列表
+        function renderTargetFileList() {
+            const fileList = document.getElementById('targetFileList');
+            fileList.innerHTML = '';
+            
+            targetFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileName = document.createElement('div');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name;
+                
+                const fileSize = document.createElement('div');
+                fileSize.className = 'file-size';
+                fileSize.textContent = formatFileSize(file.size);
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn-remove';
+                removeBtn.textContent = '移除';
+                removeBtn.onclick = () => removeTargetFile(index);
+                
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(fileSize);
+                fileItem.appendChild(removeBtn);
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        // 移除目标文件
+        function removeTargetFile(index) {
+            targetFiles.splice(index, 1);
+            renderTargetFileList();
+            updateReplaceButton();
+        }
+
+        // 更新替换按钮状态
+        function updateReplaceButton() {
+            const btn = document.getElementById('replaceBtn');
+            btn.disabled = !banFile || targetFiles.length === 0;
+        }
+
+        // 显示BrowserID消息
+        function showBrowserIDMessage(text, type) {
+            const messageArea = document.getElementById('browseridMessageArea');
+            messageArea.textContent = text;
+            messageArea.className = `message ${type} show`;
+            
+            setTimeout(() => {
+                messageArea.classList.remove('show');
+            }, 5000);
+        }
+
+        // 添加BrowserID日志
+        function addBrowserIDLog(text, type = 'info') {
+            const logArea = document.getElementById('browseridLogArea');
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${type}`;
+            logItem.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            logArea.appendChild(logItem);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // 替换文件
+        async function replaceFiles() {
+            if (!banFile || targetFiles.length === 0) {
+                showBrowserIDMessage('请上传封号数据表和目标文件', 'error');
+                return;
+            }
+
+            const progressSection = document.getElementById('browseridProgressSection');
+            const progressFill = document.getElementById('browseridProgressFill');
+            const logArea = document.getElementById('browseridLogArea');
+            const replaceBtn = document.getElementById('replaceBtn');
+
+            progressSection.style.display = 'block';
+            logArea.innerHTML = '';
+            replaceBtn.disabled = true;
+
+            addBrowserIDLog('开始处理文件...', 'info');
+
+            // 首先上传封号数据表
+            addBrowserIDLog('正在上传封号数据表...', 'info');
+            const banFormData = new FormData();
+            banFormData.append('ban_file', banFile);
+
+            try {
+                const banResponse = await fetch('/api/upload_ban_data', {
+                    method: 'POST',
+                    body: banFormData
+                });
+
+                const banResult = await banResponse.json();
+
+                if (!banResult.success) {
+                    addBrowserIDLog(`✗ 封号数据表上传失败: ${banResult.error}`, 'error');
+                    showBrowserIDMessage('封号数据表上传失败', 'error');
+                    replaceBtn.disabled = false;
+                    return;
+                }
+
+                addBrowserIDLog(`✓ 封号数据表上传成功，共 ${banResult.record_count} 条记录`, 'success');
+
+                // 处理目标文件
+                for (let i = 0; i < targetFiles.length; i++) {
+                    const file = targetFiles[i];
+                    const progress = ((i + 1) / targetFiles.length) * 100;
+                    
+                    progressFill.style.width = progress + '%';
+                    progressFill.textContent = Math.round(progress) + '%';
+
+                    addBrowserIDLog(`正在处理: ${file.name}`, 'info');
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+
+                        const response = await fetch('/api/replace_browserid', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            addBrowserIDLog(`✓ ${file.name} 处理成功！替换了 ${result.replaced_count} 条记录，未匹配 ${result.not_found_count} 条`, 'success');
+                            
+                            // 下载处理后的文件
+                            const downloadLink = document.createElement('a');
+                            downloadLink.href = '/api/download/' + result.output_file;
+                            downloadLink.download = result.output_file;
+                            downloadLink.click();
+                        } else {
+                            addBrowserIDLog(`✗ ${file.name} 处理失败: ${result.error}`, 'error');
+                        }
+                    } catch (error) {
+                        addBrowserIDLog(`✗ ${file.name} 处理失败: ${error.message}`, 'error');
+                    }
+                }
+
+                addBrowserIDLog('所有文件处理完成！', 'success');
+                showBrowserIDMessage('所有文件处理完成！', 'success');
+            } catch (error) {
+                addBrowserIDLog(`✗ 处理失败: ${error.message}`, 'error');
+                showBrowserIDMessage('处理失败', 'error');
+            }
+
+            replaceBtn.disabled = false;
         }
     </script>
 </body>

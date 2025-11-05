@@ -20,7 +20,7 @@ from io import BytesIO
 import email
 from email.parser import BytesParser
 
-from main import ExcelPriceUpdater
+from main import ExcelPriceUpdater, BrowserIDReplacer
 
 
 class WebAppHandler(http.server.SimpleHTTPRequestHandler):
@@ -28,6 +28,7 @@ class WebAppHandler(http.server.SimpleHTTPRequestHandler):
     
     config_file = Path("config.json")
     temp_dir = Path(tempfile.gettempdir()) / "excel_updater"
+    browser_id_replacer = None  # BrowserID替换器实例
     
     def __init__(self, *args, **kwargs):
         # 确保临时目录存在
@@ -73,6 +74,16 @@ class WebAppHandler(http.server.SimpleHTTPRequestHandler):
         # API: 处理Excel文件
         if parsed_path.path == '/api/process':
             self.handle_process_excel()
+            return
+        
+        # API: 上传封号数据表
+        if parsed_path.path == '/api/upload_ban_data':
+            self.handle_upload_ban_data()
+            return
+        
+        # API: 替换BrowserID
+        if parsed_path.path == '/api/replace_browserid':
+            self.handle_replace_browserid()
             return
         
         self.send_error(404, "Not Found")
@@ -263,6 +274,175 @@ class WebAppHandler(http.server.SimpleHTTPRequestHandler):
             print(f"Error downloading file: {e}")
             self.send_error(500, "Internal Server Error")
     
+    def handle_upload_ban_data(self):
+        """上传封号数据表"""
+        try:
+            # 获取content-type和boundary
+            content_type = self.headers.get('content-type', '')
+            if not content_type.startswith('multipart/form-data'):
+                raise ValueError('Invalid content type')
+            
+            # 提取boundary
+            boundary = content_type.split('boundary=')[1].strip()
+            
+            # 读取POST数据
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            # 解析multipart数据
+            parts = post_data.split(('--' + boundary).encode())
+            
+            file_data = None
+            filename = None
+            
+            for part in parts:
+                if b'Content-Disposition' in part and b'filename=' in part:
+                    # 解析disposition头
+                    lines = part.split(b'\r\n')
+                    for line in lines:
+                        if b'Content-Disposition' in line:
+                            disposition = line.decode('utf-8')
+                            filename = disposition.split('filename=')[1].strip('"')
+                            break
+                    
+                    # 文件内容在空行之后
+                    content_start = part.find(b'\r\n\r\n') + 4
+                    content_end = len(part) - 2
+                    file_data = part[content_start:content_end]
+                    break
+            
+            if not file_data or not filename:
+                raise ValueError('Missing file data')
+            
+            # 保存上传的封号数据表
+            ban_file_path = self.temp_dir / filename
+            with open(ban_file_path, 'wb') as f:
+                f.write(file_data)
+            
+            # 初始化BrowserID替换器并加载封号数据
+            WebAppHandler.browser_id_replacer = BrowserIDReplacer()
+            WebAppHandler.browser_id_replacer.load_ban_data(str(ban_file_path))
+            
+            record_count = len(WebAppHandler.browser_id_replacer.ban_mapping)
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                'success': True,
+                'record_count': record_count,
+                'message': f'封号数据表上传成功，共 {record_count} 条记录'
+            }, ensure_ascii=False).encode('utf-8'))
+            
+            # 删除上传的文件
+            ban_file_path.unlink()
+            
+        except Exception as e:
+            print(f"Error uploading ban data: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                'success': False,
+                'error': str(e)
+            }, ensure_ascii=False).encode('utf-8'))
+    
+    def handle_replace_browserid(self):
+        """替换BrowserID"""
+        try:
+            # 检查是否已上传封号数据表
+            if not WebAppHandler.browser_id_replacer:
+                raise ValueError('请先上传封号数据表')
+            
+            # 获取content-type和boundary
+            content_type = self.headers.get('content-type', '')
+            if not content_type.startswith('multipart/form-data'):
+                raise ValueError('Invalid content type')
+            
+            # 提取boundary
+            boundary = content_type.split('boundary=')[1].strip()
+            
+            # 读取POST数据
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            # 解析multipart数据
+            parts = post_data.split(('--' + boundary).encode())
+            
+            file_data = None
+            filename = None
+            
+            for part in parts:
+                if b'Content-Disposition' in part and b'filename=' in part:
+                    # 解析disposition头
+                    lines = part.split(b'\r\n')
+                    for line in lines:
+                        if b'Content-Disposition' in line:
+                            disposition = line.decode('utf-8')
+                            filename = disposition.split('filename=')[1].strip('"')
+                            break
+                    
+                    # 文件内容在空行之后
+                    content_start = part.find(b'\r\n\r\n') + 4
+                    content_end = len(part) - 2
+                    file_data = part[content_start:content_end]
+                    break
+            
+            if not file_data or not filename:
+                raise ValueError('Missing file data')
+            
+            # 保存上传的目标文件
+            temp_input = self.temp_dir / filename
+            with open(temp_input, 'wb') as f:
+                f.write(file_data)
+            
+            # 替换BrowserID
+            print(f"Replacing BrowserID in file: {temp_input}")
+            
+            result = WebAppHandler.browser_id_replacer.replace_browser_id(
+                str(temp_input),
+                output_suffix='_replaced'
+            )
+            
+            output_file = temp_input.parent / f"{temp_input.stem}_replaced{temp_input.suffix}"
+            
+            if result['success'] and output_file.exists():
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    'success': True,
+                    'output_file': output_file.name,
+                    'replaced_count': result['replaced_count'],
+                    'not_found_count': result['not_found_count'],
+                    'total_count': result['total_count']
+                }, ensure_ascii=False).encode('utf-8'))
+                
+                # 删除输入文件
+                temp_input.unlink()
+            else:
+                raise Exception('Processing failed')
+                
+        except Exception as e:
+            print(f"Error replacing BrowserID: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                'success': False,
+                'error': str(e)
+            }, ensure_ascii=False).encode('utf-8'))
+    
     def log_message(self, format, *args):
         """自定义日志格式"""
         return  # 静默模式
@@ -277,6 +457,7 @@ def start_server(port=8800):
             print("="*60)
             print(f"\n🌐 访问地址: http://localhost:{port}")
             print(f"\n功能：")
+            print(f"  🔄 BrowserID替换 - 根据封号数据表批量替换BrowserID")
             print(f"  📈 价格更新 - 批量处理Excel文件")
             print(f"  ⚙️  配置管理 - 可视化编辑价格配置")
             print(f"\n按 Ctrl+C 停止服务器\n")
