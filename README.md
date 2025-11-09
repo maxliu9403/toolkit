@@ -1,297 +1,438 @@
-# Excel价格批量更新工具
+# Excel 工具箱
 
-一个Python工具，用于批量更新Excel文件中的价格信息。
+一个集成多功能的 Excel 处理工具，提供价格批量更新、BrowserID 替换、Excel 拆分合并等功能。
 
-## 功能特点
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-### 核心功能
-- **可视化配置编辑器**: 🎨 Web界面可视化编辑价格配置，无需手动编辑JSON
-- **智能搜索**: 🔍 实时搜索产品名称，快速定位目标配置
-- **灵活分页**: 📄 支持多种每页显示数量，轻松浏览大量产品
-- **交互式操作**: 支持交互式选择多个Excel文件
-- **正则匹配**: 通过正则表达式匹配产品名称关键字
-- **价格区间**: 支持固定价格和价格区间两种配置方式
+## ✨ 功能特点
+
+### 📋 Excel 拆分/合并
+- **拆分模式**: 按 BrowserID 将 Excel 文件拆分成多个文件
+- **合并模式**: 将多个 Excel 文件合并成一个文件
+- **智能处理**: 自动添加来源信息，保持数据完整性
+- **批量操作**: 支持同时处理多个文件
+
+### 🔄 BrowserID 替换
+- 根据封号数据表批量替换 BrowserID
+- 支持多个目标文件同时处理
+- 提供详细的替换统计信息
+- 自动匹配和替换
+
+### 📈 价格批量更新
+- **智能匹配**: 通过正则表达式匹配产品名称
+- **灵活定价**: 支持固定价格和价格区间两种方式
+- **多地域支持**: 支持任意地域（HK、SG、MY、TW、JP、KR等）
 - **随机定价**: 在指定区间内自动生成符合步长要求的价格
-- **多地域支持**: 支持动态添加任意地域（如HK、SG、MY、TW、JP、KR等），自动生成对应的价格列
-- **错误处理**: 完善的错误提示，包括配置缺失、匹配失败等
-- **批量处理**: 一次处理多个Excel文件
 
-## 📦 部署与发布
+### ⚙️ 配置管理
+- **可视化编辑**: Web界面可视化编辑价格配置
+- **实时保存**: 自动保存配置修改
+- **格式验证**: 自动验证配置格式
 
-### 快速部署（打包为可执行文件）
-
-如果你想将工具打包为独立的可执行文件（无需Python环境），可以使用部署脚本：
-
-```bash
-# 1. 激活虚拟环境
-source venv/bin/activate
-
-# 2. 运行部署脚本（自动安装依赖、打包、创建发布包）
-python deploy.py
-
-# 3. 发布包位置
-cd release/excel_price_updater_*
-
-# 4. 运行可执行文件
-./run.sh  # Mac/Linux
-run.bat   # Windows
-```
-
-**部署选项：**
-- `python deploy.py` - 单文件模式（默认，推荐）
-- `python deploy.py --keep-temp` - 保留临时文件（调试用）
-- `python deploy.py --onedir` - 目录模式
-
-**详细文档：** 查看 [DEPLOYMENT.md](DEPLOYMENT.md)
-
----
-
-## 💻 开发使用
-
-### 安装要求
-
-Python 3.8+
+## 🚀 快速开始
 
 ### 安装依赖
-
-### 方式一：使用虚拟环境（推荐）
 
 ```bash
 # 创建虚拟环境
 python3 -m venv venv
 
 # 激活虚拟环境
-# macOS/Linux:
-source venv/bin/activate
-# Windows:
-# venv\Scripts\activate
+source venv/bin/activate  # macOS/Linux
+# venv\Scripts\activate    # Windows
 
 # 安装依赖
 pip install -r requirements.txt
 ```
 
-### 方式二：直接安装
+### 启动服务
 
 ```bash
-pip install -r requirements.txt
-```
+# 方法一：使用启动脚本（推荐）
+./start.sh
 
-## 🎨 可视化配置编辑器
-
-推荐使用可视化配置编辑器来编辑价格配置，无需手动编写JSON：
-
-```bash
-# 启动配置编辑器
+# 方法二：手动启动
 source venv/bin/activate
-python open_config_editor.py
+python app.py
+
+# 方法三：重启服务
+./restart.sh
 ```
 
-编辑器会自动：
-- ✅ 打开浏览器显示图形界面
-- ✅ 自动加载现有配置
-- ✅ 实时保存修改
-- ✅ 验证配置格式
+服务启动后，访问: **http://localhost:8800**
 
-详细使用说明请参阅 [CONFIG_EDITOR.md](CONFIG_EDITOR.md)
+### 停止服务
 
-## 配置文件
+```bash
+./stop.sh
+```
 
-创建 `config.json` 文件，配置产品名称关键字和对应的价格。
+## 📖 使用指南
 
-### 配置格式支持两种方式：
+### 1. Excel 拆分/合并
 
-#### 1. 固定价格
+#### 拆分模式
+1. 访问第一个标签页 "📋 Excel拆分/合并"
+2. 选择 "拆分模式"
+3. 设置店铺数量（默认20）
+4. 上传需要拆分的 Excel 文件（支持拖拽）
+5. 点击 "开始拆分"
+6. 自动下载 ZIP 压缩包
+
+#### 合并模式
+1. 选择 "合并模式"
+2. 上传多个 Excel 文件
+3. 点击 "开始合并"
+4. 自动下载合并后的文件
+
+### 2. BrowserID 替换
+
+1. 访问 "🔄 BrowserID替换" 标签页
+2. 上传封号数据表（包含"封号ID"和"新对应ID"列）
+3. 上传需要替换的目标 Excel 文件
+4. 点击 "开始替换BrowserID"
+5. 自动下载替换后的文件
+
+**封号数据表格式**:
+```
+| 封号ID | 新对应ID |
+|--------|----------|
+| 123    | 456      |
+| 789    | 101      |
+```
+
+### 3. 价格更新
+
+1. 访问 "📈 价格更新" 标签页
+2. 上传 Excel 文件
+3. 选择需要更新的地域（如 HK、SG、MY）
+4. 点击 "开始更新价格"
+5. 自动下载更新后的文件
+
+**Excel 文件格式要求**:
+- 必须包含 `ProductNameCn` 列（产品中文名称）
+- 必须包含对应的价格列（如 `HKPrice`、`SGPrice`）
+
+### 4. 配置管理
+
+1. 访问 "⚙️ 配置管理" 标签页
+2. 添加/编辑产品配置
+3. 设置价格（固定价格或区间价格）
+4. 点击 "保存配置"
+
+**配置格式示例**:
 
 ```json
 {
-  "example_product": {
-    "hk": 100,
-    "sg": 50,
-    "my": 80
-  }
-}
-```
-
-#### 2. 价格区间（随机生成）
-
-```json
-{
-  "Nike Air force 1": {
+  "Nike Air Force 1": {
     "hk": [550, 580, 10],
     "sg": [70, 85, 5],
     "my": [50, 60, 10]
+  },
+  "Adidas Samba": {
+    "hk": 450,
+    "sg": 60,
+    "my": 45
   }
 }
 ```
 
-**价格区间配置格式**: `[最小值, 最大值, 步长]`
+**价格区间格式**: `[最小值, 最大值, 步长]`
+- 程序会在区间内随机生成符合步长的价格
+- 示例：`[550, 580, 10]` 会生成 550、560、570 或 580
 
-- 程序会在指定区间内随机生成符合步长要求的价格
-- 示例：`[550, 580, 10]` 会随机生成 550, 560, 570, 580 中的一个值
-- HK价格：推荐步长为10的倍数
-- SG价格：推荐步长为5的倍数
-- MY价格：推荐步长为10的倍数
+## 🔧 服务管理
 
-**配置说明**:
-- 每个键是产品名称关键字（将用于正则匹配）
-- 值包含各地域的价格配置
-- **支持混合格式**：同一产品的不同地域可以使用固定价格或区间价格
-- **支持任意地域**：可以添加任意地域代码（如tw、jp、kr等），系统会自动检测
-- **注意**：可以配置多个相关的关键字（如`samba`和`samba a`），更长的关键字会优先匹配
-- **重要**：使用价格区间时，最小值和最大值都必须是步长的倍数
+### 启动服务
+```bash
+./start.sh
+```
+- 后台运行
+- 日志输出到 `server.log`
+- 显示进程ID和访问地址
 
-### 3. 混合配置示例
-
-```json
-{
-  "Mixed Product": {
-    "hk": [500, 600, 10],
-    "sg": 70,
-    "my": 50,
-    "tw": 100,
-    "jp": [800, 1000, 10]
-  }
-}
+### 停止服务
+```bash
+./stop.sh
 ```
 
-## Excel文件格式要求
+### 重启服务
+```bash
+./restart.sh
+```
+- 前台运行，适合开发调试
+- 按 Ctrl+C 停止
 
-Excel文件必须包含以下列：
+### 查看日志
+```bash
+# 实时查看
+tail -f server.log
 
-| 列名 | 说明 |
-|------|------|
-| ProductNameCn | 产品中文名称（用于匹配关键字）|
-| HKPrice | 香港价格 |
-| SGPrice | 新加坡价格 |
-| MYPrice | 马来西亚价格 |
-| {Region}Price | 其他地域价格（如TWPrice, JPPrice等）|
+# 查看全部
+cat server.log
+```
 
-**注意**：列名命名规则为 `{地域代码大写}Price`，如 TWPrice、JPPrice、KRPrice 等。
+### 检查服务状态
+```bash
+# 查看进程
+ps aux | grep "python.*app.py"
 
-## 使用方法
+# 测试API
+curl http://localhost:8800/api/regions
+```
 
-### 1. 准备配置文件
+## 📁 项目结构
 
-确保 `config.json` 文件存在并包含正确的价格配置。
+```
+toolkit/
+├── modules/                      # 功能模块
+│   ├── browserid_replacer.py    # BrowserID替换模块
+│   ├── price_updater.py         # 价格更新模块
+│   └── split_excel.py           # Excel拆分/合并模块
+│
+├── app.py                        # Web服务器（主程序）
+├── main.py                       # 命令行工具
+│
+├── index.html                    # Web主界面
+├── config_editor.html            # 配置编辑器页面
+├── config.json                   # 价格配置文件
+│
+├── start.sh                      # 启动脚本
+├── stop.sh                       # 停止脚本
+├── restart.sh                    # 重启脚本
+├── server.log                    # 服务日志
+│
+├── deploy.py                     # 部署打包脚本
+├── requirements.txt              # 依赖列表
+└── README.md                     # 本文件
+```
 
-### 2. 运行程序
+## 🎯 API 接口
 
-如果使用了虚拟环境，请先激活：
+### Excel 拆分/合并
+- `POST /api/split_excel` - 拆分 Excel 文件
+- `POST /api/merge_excel` - 合并 Excel 文件
+
+### BrowserID 替换
+- `POST /api/upload_ban_data` - 上传封号数据表
+- `POST /api/replace_browserid` - 替换 BrowserID
+
+### 价格更新
+- `POST /api/process` - 处理 Excel 文件更新价格
+
+### 配置管理
+- `GET /api/config` - 获取配置
+- `POST /api/config` - 保存配置
+- `GET /api/regions` - 获取可用地域
+
+### 文件下载
+- `GET /api/download/<filename>` - 下载处理后的文件
+
+## 💻 命令行使用
+
+如果需要在命令行中使用（不启动Web服务）：
 
 ```bash
-# macOS/Linux:
 source venv/bin/activate
-
-# 运行程序
 python main.py
 ```
 
-### 3. 交互式操作
+按照提示输入文件路径和地域即可。
 
-1. **选择Excel文件**:
-   - 输入Excel文件的完整路径
-   - 支持通配符（如 `*.xlsx`）
-   - 直接回车结束输入
+## 📦 部署打包
 
-2. **选择地域**:
-   - 输入需要更新的地域代码（如：hk,sg,my）
-   - 多个地域用逗号分隔
+### 打包为可执行文件
 
-3. **处理结果**:
-   - 处理完成后会生成带 `_updated` 后缀的新文件
-   - 显示成功和失败的统计信息
+```bash
+# 1. 激活虚拟环境
+source venv/bin/activate
 
-### 示例
+# 2. 运行部署脚本
+python deploy.py
 
-```
-请输入Excel文件路径（直接回车结束输入）: data/products.xlsx
-请输入Excel文件路径（直接回车结束输入）: 
-总共选择了 1 个文件:
-  1. data/products.xlsx
+# 3. 发布包位置
+cd release/excel_price_updater_*
 
-可用地域:
-  HK   -> HKPrice
-  SG   -> SGPrice
-  MY   -> MYPrice
-
-请输入需要更新的地域（多个用逗号分隔，如: hk,sg,my）:
-地域代码: hk,sg,my
-
-正在验证配置文件...
-✓ 配置文件验证通过
-
-============================================================
-开始处理文件...
-============================================================
-
-正在处理: data/products.xlsx
-✓ 成功更新 50 条记录
-✓ 已保存到: data/products_updated.xlsx
-
-============================================================
-处理完成!
-============================================================
-成功: 1 个文件
-失败: 0 个文件
+# 4. 运行
+./run.sh  # Mac/Linux
+run.bat   # Windows
 ```
 
-## 匹配逻辑
+**部署选项**:
+- `python deploy.py` - 单文件模式（默认）
+- `python deploy.py --keep-temp` - 保留临时文件
+- `python deploy.py --onedir` - 目录模式
 
-1. 程序读取Excel中的 `ProductNameCn` 列
-2. 对每个产品名称，在配置文件中查找所有关键字
-3. 使用正则表达式（大小写不敏感）匹配产品名称
-4. **优先匹配更具体（更长）的关键字**，例如：
-   - 如果配置中有`samba`和`samba a`两个关键字
-   - 产品名称为`Samba A产品型号X`会匹配到`samba a`而不是`samba`
-5. 找到匹配的关键字后，使用对应的价格配置更新Excel
+## ❓ 常见问题
 
-**示例** - 匹配优先级演示：
+### Q: 服务无法启动？
+A: 检查以下几点：
+1. 端口 8800 是否被占用
+   ```bash
+   lsof -i :8800
+   ```
+2. 是否安装了所有依赖
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. 是否激活了虚拟环境
+   ```bash
+   source venv/bin/activate
+   ```
 
-假设配置文件包含：
+### Q: 如何添加新地域？
+A: 在配置编辑器中直接添加新地域配置即可，系统会自动检测。
+
+### Q: 如何修改端口？
+A: 编辑 `app.py`，修改 `start_server(port=8800)` 中的端口号。
+
+### Q: 支持哪些Excel格式？
+A: 支持 `.xlsx` 和 `.xls` 格式。
+
+### Q: 如何批量处理多个文件？
+A: 在Web界面中可以一次选择多个文件进行处理。
+
+### Q: 匹配规则是什么？
+A: 
+- 使用正则表达式匹配产品名称
+- 不区分大小写
+- 优先匹配更长（更具体）的关键字
+
+示例：
+```
+配置: "samba" 和 "samba og"
+产品: "Adidas Samba OG"
+结果: 匹配到 "samba og"（更具体）
+```
+
+## 🔄 更新日志
+
+### v2.0.0 (2025-11-09)
+- ✨ 新增 Excel 拆分/合并功能
+- ✨ 集成所有功能到 Web 界面
+- 🎨 优化项目结构，模块化代码
+- 📝 完善文档和使用说明
+- 🚀 添加启动/停止脚本
+- 🧹 清理无用代码和文件
+
+### v1.0.0
+- 🎉 初始版本
+- 价格批量更新功能
+- BrowserID 替换功能
+- 配置编辑器
+
+## 🛠️ 技术栈
+
+- **Python 3.8+**
+- **pandas** - Excel 数据处理
+- **openpyxl** - Excel 读写
+- **tqdm** - 进度条显示
+- **http.server** - Web 服务器
+
+## 📝 依赖包
+
+主要依赖：
+```
+pandas>=2.0.0
+openpyxl>=3.0.0
+numpy>=1.24.0
+tqdm>=4.65.0
+```
+
+完整依赖列表请查看 `requirements.txt`。
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+MIT License
+
+---
+
+## 📚 附录
+
+### 匹配逻辑详解
+
+1. 读取 Excel 中的 `ProductNameCn` 列
+2. 在配置文件中查找所有关键字
+3. 使用正则表达式（不区分大小写）匹配
+4. **优先匹配更长的关键字**
+5. 找到匹配后使用对应配置更新价格
+
+### 价格配置说明
+
+**固定价格**:
 ```json
 {
-  "samba a": { "hk": 150, "sg": 15, "my": 25 },
-  "samba": { "hk": 100, "sg": 10, "my": 20 }
+  "product": {
+    "hk": 100,
+    "sg": 50
+  }
 }
 ```
 
-匹配结果：
-- `Samba A产品型号X` → 匹配到 `samba a` → 价格: HK 150, SG 15, MY 25
-- `Samba产品A` → 匹配到 `samba` → 价格: HK 100, SG 10, MY 20
+**价格区间**:
+```json
+{
+  "product": {
+    "hk": [500, 600, 10],
+    "sg": [70, 85, 5]
+  }
+}
+```
 
-**注意事项**:
-- **匹配优先级**：更长的关键字优先匹配（优惠匹配规则）
-- 如果产品名称中包含多个可能的关键字，优先使用更具体（更长）的那个
-- 如果匹配失败，程序会报错并提示补充配置
-- 如果配置中缺少某些地域的价格，程序会报错
+**混合配置**:
+```json
+{
+  "product": {
+    "hk": [500, 600, 10],
+    "sg": 70,
+    "my": 50
+  }
+}
+```
 
-## 错误处理
+### 清理维护
 
-程序会在以下情况报错：
+**定期清理**:
+```bash
+# 清理缓存
+rm -rf __pycache__ modules/__pycache__
+find . -name "*.pyc" -delete
 
-1. **配置文件不存在或格式错误**
-   - 错误提示：配置文件不存在或格式错误
+# 清空日志
+> server.log
+```
 
-2. **Excel文件缺少必需列**
-   - 错误提示：缺少必需的列（ProductNameCn或价格列）
+**重建虚拟环境**:
+```bash
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-3. **产品无法匹配到关键字**
-   - 错误提示：无法匹配产品价格配置，列出未匹配的产品
+### Git 忽略
 
-4. **配置缺少某地域的价格**
-   - 错误提示：产品缺少某地域的价格配置
+建议 `.gitignore` 包含：
+```
+__pycache__/
+*.pyc
+*.pyo
+venv/
+server.log
+*.xlsx
+*.xls
+!sample*.xlsx
+```
 
-5. **地域代码无效**
-   - 错误提示：无效的地域代码
+---
 
-## 输出文件
+**更新时间**: 2025-11-09  
+**版本**: v2.0.0  
+**维护**: 持续更新中
 
-程序会生成带 `_updated` 后缀的新文件，保留原文件不变。
-
-例如：
-- 输入：`products.xlsx`
-- 输出：`products_updated.xlsx`
-
-## 许可证
-
-MIT License
+如有问题或建议，欢迎反馈！🎉

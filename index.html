@@ -463,13 +463,75 @@
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('browserid')">🔄 BrowserID替换</button>
+            <button class="tab active" onclick="switchTab('split')">📋 Excel拆分/合并</button>
+            <button class="tab" onclick="switchTab('browserid')">🔄 BrowserID替换</button>
             <button class="tab" onclick="switchTab('process')">📈 价格更新</button>
             <button class="tab" onclick="switchTab('config')">⚙️ 配置管理</button>
         </div>
 
+        <!-- Excel拆分/合并标签页 -->
+        <div id="split-tab" class="tab-content active">
+            <div class="section">
+                <div class="section-title">
+                    <span>📋</span>
+                    <span>选择处理模式</span>
+                </div>
+                <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                    <button class="btn-primary" style="flex: 1;" onclick="selectMode('split')" id="splitModeBtn">
+                        📂 拆分模式
+                    </button>
+                    <button class="btn-primary" style="flex: 1; background: #6c757d;" onclick="selectMode('merge')" id="mergeModeBtn">
+                        🔗 合并模式
+                    </button>
+                </div>
+                <div id="modeDescription" style="padding: 15px; background: #e7f1ff; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>拆分模式：</strong>按 BrowserID 将 Excel 文件拆分成多个文件
+                </div>
+            </div>
+
+            <div class="section" id="splitGroupSizeSection">
+                <div class="section-title">
+                    <span>🔢</span>
+                    <span>设置分组大小</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <label for="groupSizeInput" style="font-size: 16px; font-weight: 600;">店铺数量：</label>
+                    <input type="number" id="groupSizeInput" value="20" min="1" max="1000" 
+                           style="flex: 1; padding: 10px; border: 2px solid #667eea; border-radius: 8px; font-size: 16px;">
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span>📁</span>
+                    <span>上传Excel文件</span>
+                </div>
+                <div class="upload-area" id="splitUploadArea" onclick="document.getElementById('splitFileInput').click()">
+                    <div class="upload-icon">☁️</div>
+                    <div class="upload-text">点击或拖拽Excel文件</div>
+                    <div class="upload-hint">支持 .xlsx, .xls 格式，可同时上传多个文件</div>
+                </div>
+                <input type="file" id="splitFileInput" accept=".xlsx,.xls" multiple style="display: none;">
+                
+                <div class="file-list" id="splitFileList"></div>
+            </div>
+
+            <div id="splitMessageArea" class="message"></div>
+
+            <button class="btn-primary" id="splitProcessBtn" onclick="processSplitFiles()" disabled>
+                <span id="splitBtnText">🚀 开始拆分</span>
+            </button>
+
+            <div class="progress-section" id="splitProgressSection">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="splitProgressFill">0%</div>
+                </div>
+                <div class="log-area" id="splitLogArea"></div>
+            </div>
+        </div>
+
         <!-- BrowserID替换标签页 -->
-        <div id="browserid-tab" class="tab-content active">
+        <div id="browserid-tab" class="tab-content">
             <div class="section">
                 <div class="section-title">
                     <span>📊</span>
@@ -567,12 +629,17 @@
         // BrowserID替换相关变量
         let banFile = null;
         let targetFiles = [];
+        
+        // Excel拆分/合并相关变量
+        let splitFiles = [];
+        let splitMode = 'split';  // 'split' 或 'merge'
 
         // 页面加载时初始化
         window.onload = function() {
             loadAvailableRegions();
             setupDragDrop();
             setupBrowserIDDragDrop();
+            setupSplitDragDrop();
         };
 
         // 切换标签页
@@ -1181,6 +1248,252 @@
             }
 
             replaceBtn.disabled = false;
+        }
+        
+        // ==================== Excel拆分/合并功能 ====================
+        
+        // 选择处理模式
+        function selectMode(mode) {
+            splitMode = mode;
+            const splitBtn = document.getElementById('splitModeBtn');
+            const mergeBtn = document.getElementById('mergeModeBtn');
+            const description = document.getElementById('modeDescription');
+            const groupSizeSection = document.getElementById('splitGroupSizeSection');
+            const btnText = document.getElementById('splitBtnText');
+            
+            if (mode === 'split') {
+                splitBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                mergeBtn.style.background = '#6c757d';
+                description.innerHTML = '<strong>拆分模式：</strong>按 BrowserID 将 Excel 文件拆分成多个文件';
+                groupSizeSection.style.display = 'block';
+                btnText.textContent = '🚀 开始拆分';
+            } else {
+                splitBtn.style.background = '#6c757d';
+                mergeBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                description.innerHTML = '<strong>合并模式：</strong>将多个 Excel 文件合并成一个文件';
+                groupSizeSection.style.display = 'none';
+                btnText.textContent = '🚀 开始合并';
+            }
+        }
+        
+        // 设置Excel拆分/合并的拖拽上传
+        function setupSplitDragDrop() {
+            const uploadArea = document.getElementById('splitUploadArea');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.add('dragover');
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.remove('dragover');
+                }, false);
+            });
+            
+            uploadArea.addEventListener('drop', handleSplitDrop, false);
+            document.getElementById('splitFileInput').addEventListener('change', handleSplitFileSelect, false);
+        }
+        
+        // 处理拖拽上传
+        function handleSplitDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleSplitFiles(files);
+        }
+        
+        // 处理文件选择
+        function handleSplitFileSelect(e) {
+            const files = e.target.files;
+            handleSplitFiles(files);
+        }
+        
+        // 处理文件
+        function handleSplitFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    splitFiles.push(file);
+                } else {
+                    showSplitMessage(`文件 ${file.name} 格式不支持`, 'error');
+                }
+            });
+            renderSplitFileList();
+            updateSplitProcessButton();
+        }
+        
+        // 渲染文件列表
+        function renderSplitFileList() {
+            const fileList = document.getElementById('splitFileList');
+            fileList.innerHTML = '';
+            
+            splitFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileName = document.createElement('div');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name;
+                
+                const fileSize = document.createElement('div');
+                fileSize.className = 'file-size';
+                fileSize.textContent = formatFileSize(file.size);
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn-remove';
+                removeBtn.textContent = '移除';
+                removeBtn.onclick = () => removeSplitFile(index);
+                
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(fileSize);
+                fileItem.appendChild(removeBtn);
+                fileList.appendChild(fileItem);
+            });
+        }
+        
+        // 移除文件
+        function removeSplitFile(index) {
+            splitFiles.splice(index, 1);
+            renderSplitFileList();
+            updateSplitProcessButton();
+        }
+        
+        // 更新处理按钮状态
+        function updateSplitProcessButton() {
+            const btn = document.getElementById('splitProcessBtn');
+            btn.disabled = splitFiles.length === 0;
+        }
+        
+        // 显示消息
+        function showSplitMessage(text, type) {
+            const messageArea = document.getElementById('splitMessageArea');
+            messageArea.textContent = text;
+            messageArea.className = `message ${type} show`;
+            
+            setTimeout(() => {
+                messageArea.classList.remove('show');
+            }, 5000);
+        }
+        
+        // 添加日志
+        function addSplitLog(text, type = 'info') {
+            const logArea = document.getElementById('splitLogArea');
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${type}`;
+            logItem.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            logArea.appendChild(logItem);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+        
+        // 处理文件
+        async function processSplitFiles() {
+            if (splitFiles.length === 0) {
+                showSplitMessage('请上传文件', 'error');
+                return;
+            }
+            
+            const progressSection = document.getElementById('splitProgressSection');
+            const progressFill = document.getElementById('splitProgressFill');
+            const logArea = document.getElementById('splitLogArea');
+            const processBtn = document.getElementById('splitProcessBtn');
+            
+            progressSection.style.display = 'block';
+            logArea.innerHTML = '';
+            processBtn.disabled = true;
+            
+            addSplitLog('开始处理文件...', 'info');
+            
+            try {
+                const formData = new FormData();
+                
+                // 添加所有文件
+                splitFiles.forEach(file => {
+                    formData.append('files', file);
+                });
+                
+                // 根据模式处理
+                if (splitMode === 'split') {
+                    const groupSize = document.getElementById('groupSizeInput').value;
+                    formData.append('group_size', groupSize);
+                    
+                    addSplitLog(`拆分模式 - 分组大小: ${groupSize}`, 'info');
+                    
+                    progressFill.style.width = '50%';
+                    progressFill.textContent = '50%';
+                    
+                    const response = await fetch('/api/split_excel', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        progressFill.style.width = '100%';
+                        progressFill.textContent = '100%';
+                        
+                        addSplitLog(`✓ 拆分成功！生成了 ${result.total_output} 个文件`, 'success');
+                        addSplitLog(`✓ 共处理 ${result.browser_id_count} 个不同的 BrowserID`, 'success');
+                        
+                        // 下载结果文件
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = '/api/download/' + result.output_file;
+                        downloadLink.download = result.output_file;
+                        downloadLink.click();
+                        
+                        showSplitMessage('拆分完成！文件已自动下载', 'success');
+                    } else {
+                        addSplitLog(`✗ 拆分失败: ${result.error}`, 'error');
+                        showSplitMessage('拆分失败', 'error');
+                    }
+                } else {
+                    // 合并模式
+                    addSplitLog(`合并模式 - 合并 ${splitFiles.length} 个文件`, 'info');
+                    
+                    progressFill.style.width = '50%';
+                    progressFill.textContent = '50%';
+                    
+                    const response = await fetch('/api/merge_excel', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        progressFill.style.width = '100%';
+                        progressFill.textContent = '100%';
+                        
+                        addSplitLog(`✓ 合并成功！总行数: ${result.total_rows}`, 'success');
+                        addSplitLog(`✓ 合并了 ${result.merged_files_count} 个文件`, 'success');
+                        
+                        // 下载结果文件
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = '/api/download/' + result.output_file;
+                        downloadLink.download = result.output_file;
+                        downloadLink.click();
+                        
+                        showSplitMessage('合并完成！文件已自动下载', 'success');
+                    } else {
+                        addSplitLog(`✗ 合并失败: ${result.error}`, 'error');
+                        showSplitMessage('合并失败', 'error');
+                    }
+                }
+            } catch (error) {
+                addSplitLog(`✗ 处理失败: ${error.message}`, 'error');
+                showSplitMessage('处理失败', 'error');
+            }
+            
+            processBtn.disabled = false;
         }
     </script>
 </body>

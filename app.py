@@ -17,10 +17,11 @@ import shutil
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs, unquote
 from io import BytesIO
+from datetime import datetime
 import email
 from email.parser import BytesParser
 
-from main import ExcelPriceUpdater, BrowserIDReplacer
+from modules import ExcelPriceUpdater, BrowserIDReplacer, ExcelSplitter
 
 
 class WebAppHandler(http.server.SimpleHTTPRequestHandler):
@@ -84,6 +85,16 @@ class WebAppHandler(http.server.SimpleHTTPRequestHandler):
         # API: 替换BrowserID
         if parsed_path.path == '/api/replace_browserid':
             self.handle_replace_browserid()
+            return
+        
+        # API: Excel拆分
+        if parsed_path.path == '/api/split_excel':
+            self.handle_split_excel()
+            return
+        
+        # API: Excel合并
+        if parsed_path.path == '/api/merge_excel':
+            self.handle_merge_excel()
             return
         
         self.send_error(404, "Not Found")
@@ -431,6 +442,203 @@ class WebAppHandler(http.server.SimpleHTTPRequestHandler):
                 
         except Exception as e:
             print(f"Error replacing BrowserID: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                'success': False,
+                'error': str(e)
+            }, ensure_ascii=False).encode('utf-8'))
+    
+    def handle_split_excel(self):
+        """处理Excel拆分请求"""
+        try:
+            # 获取content-type和boundary
+            content_type = self.headers.get('content-type', '')
+            if not content_type.startswith('multipart/form-data'):
+                raise ValueError('Invalid content type')
+            
+            # 提取boundary
+            boundary = content_type.split('boundary=')[1].strip()
+            
+            # 读取POST数据
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            # 解析multipart数据
+            parts = post_data.split(('--' + boundary).encode())
+            
+            files_data = []
+            group_size = 20  # 默认值
+            
+            for part in parts:
+                if b'Content-Disposition' in part:
+                    lines = part.split(b'\r\n')
+                    for line in lines:
+                        if b'Content-Disposition' in line:
+                            disposition = line.decode('utf-8')
+                            
+                            # 提取文件
+                            if 'filename=' in disposition:
+                                filename = disposition.split('filename=')[1].strip('"')
+                                content_start = part.find(b'\r\n\r\n') + 4
+                                content_end = len(part) - 2
+                                file_data = part[content_start:content_end]
+                                files_data.append((filename, file_data))
+                            
+                            # 提取分组大小
+                            elif 'name="group_size"' in disposition:
+                                content_start = part.find(b'\r\n\r\n') + 4
+                                content_end = len(part) - 2
+                                group_size = int(part[content_start:content_end].decode('utf-8'))
+            
+            if not files_data:
+                raise ValueError('Missing files data')
+            
+            # 创建临时目录保存上传的文件
+            import tempfile
+            temp_input_dir = Path(tempfile.mkdtemp())
+            
+            # 保存所有上传的文件
+            excel_files = []
+            for filename, file_data in files_data:
+                temp_file = temp_input_dir / filename
+                with open(temp_file, 'wb') as f:
+                    f.write(file_data)
+                excel_files.append(str(temp_file))
+            
+            # 创建临时输出目录
+            temp_output_dir = Path(tempfile.mkdtemp())
+            
+            # 使用ExcelSplitter处理
+            splitter = ExcelSplitter()
+            result = splitter.split_by_browser_id(
+                str(temp_input_dir),
+                group_size,
+                str(temp_output_dir)
+            )
+            
+            if result['success']:
+                # 打包输出文件为zip
+                import zipfile
+                zip_path = self.temp_dir / f"split_result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+                
+                with zipfile.ZipFile(zip_path, 'w') as zipf:
+                    for file in temp_output_dir.glob('*.xlsx'):
+                        zipf.write(file, file.name)
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    'success': True,
+                    'output_file': zip_path.name,
+                    'total_output': result['total_output'],
+                    'browser_id_count': result['browser_id_count']
+                }, ensure_ascii=False).encode('utf-8'))
+                
+                # 清理临时目录
+                import shutil
+                shutil.rmtree(temp_input_dir)
+                shutil.rmtree(temp_output_dir)
+            else:
+                raise Exception(result.get('error', 'Processing failed'))
+                
+        except Exception as e:
+            print(f"Error splitting Excel: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                'success': False,
+                'error': str(e)
+            }, ensure_ascii=False).encode('utf-8'))
+    
+    def handle_merge_excel(self):
+        """处理Excel合并请求"""
+        try:
+            # 获取content-type和boundary
+            content_type = self.headers.get('content-type', '')
+            if not content_type.startswith('multipart/form-data'):
+                raise ValueError('Invalid content type')
+            
+            # 提取boundary
+            boundary = content_type.split('boundary=')[1].strip()
+            
+            # 读取POST数据
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            # 解析multipart数据
+            parts = post_data.split(('--' + boundary).encode())
+            
+            files_data = []
+            
+            for part in parts:
+                if b'Content-Disposition' in part and b'filename=' in part:
+                    lines = part.split(b'\r\n')
+                    for line in lines:
+                        if b'Content-Disposition' in line:
+                            disposition = line.decode('utf-8')
+                            filename = disposition.split('filename=')[1].strip('"')
+                            break
+                    
+                    content_start = part.find(b'\r\n\r\n') + 4
+                    content_end = len(part) - 2
+                    file_data = part[content_start:content_end]
+                    files_data.append((filename, file_data))
+            
+            if not files_data:
+                raise ValueError('Missing files data')
+            
+            # 创建临时目录保存上传的文件
+            import tempfile
+            temp_input_dir = Path(tempfile.mkdtemp())
+            
+            # 保存所有上传的文件
+            excel_files = []
+            for filename, file_data in files_data:
+                temp_file = temp_input_dir / filename
+                with open(temp_file, 'wb') as f:
+                    f.write(file_data)
+                excel_files.append(str(temp_file))
+            
+            # 输出文件路径
+            output_file = self.temp_dir / f"merged_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            
+            # 使用ExcelSplitter合并
+            splitter = ExcelSplitter()
+            result = splitter.merge_excel_files(excel_files, str(output_file))
+            
+            if result['success']:
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    'success': True,
+                    'output_file': output_file.name,
+                    'merged_files_count': result['merged_files_count'],
+                    'total_rows': result['total_rows']
+                }, ensure_ascii=False).encode('utf-8'))
+                
+                # 清理临时目录
+                import shutil
+                shutil.rmtree(temp_input_dir)
+            else:
+                raise Exception(result.get('error', 'Merge failed'))
+                
+        except Exception as e:
+            print(f"Error merging Excel: {e}")
             import traceback
             traceback.print_exc()
             
