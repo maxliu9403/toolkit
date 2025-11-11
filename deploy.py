@@ -61,7 +61,7 @@ class ExcelPriceUpdaterBuilder:
         # 隐藏导入
         self.hidden_imports = [
             # 第三方库
-            "pandas", "openpyxl", "numpy",
+            "pandas", "openpyxl", "numpy", "tqdm",
             # pandas 依赖
             "pandas._libs", "pandas._libs.tslibs", "pandas._libs.tslibs.base",
             "pandas._libs.tslibs.timedeltas", "pandas._libs.tslibs.np_datetime",
@@ -69,6 +69,8 @@ class ExcelPriceUpdaterBuilder:
             # openpyxl 依赖
             "openpyxl.cell", "openpyxl.cell.cell", "openpyxl.styles",
             "openpyxl.worksheet", "openpyxl.worksheet.worksheet",
+            # tqdm 依赖
+            "tqdm.std", "tqdm.utils", "tqdm.auto", "tqdm.gui",
             # 标准库
             "json", "re", "random", "pathlib", "http.server",
             "urllib.parse", "email.parser", "io", "tempfile",
@@ -104,6 +106,7 @@ class ExcelPriceUpdaterBuilder:
             'pandas': 'pandas',
             'openpyxl': 'openpyxl',
             'numpy': 'numpy',
+            'tqdm': 'tqdm',
         }
         
         missing_packages = []
@@ -218,6 +221,7 @@ class ExcelPriceUpdaterBuilder:
         cmd.extend(["--collect-all", "pandas"])
         cmd.extend(["--collect-all", "openpyxl"])
         cmd.extend(["--collect-all", "numpy"])
+        cmd.extend(["--collect-all", "tqdm"])
 
         # 添加数据文件
         for src, dst in self.data_includes:

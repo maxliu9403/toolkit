@@ -248,13 +248,16 @@ python main.py
 # 1. 激活虚拟环境
 source venv/bin/activate
 
-# 2. 运行部署脚本
+# 2. 确保所有依赖已安装
+pip install -r requirements.txt
+
+# 3. 运行部署脚本
 python deploy.py
 
-# 3. 发布包位置
+# 4. 发布包位置
 cd release/excel_price_updater_*
 
-# 4. 运行
+# 5. 运行
 ./run.sh  # Mac/Linux
 run.bat   # Windows
 ```
@@ -263,6 +266,15 @@ run.bat   # Windows
 - `python deploy.py` - 单文件模式（默认）
 - `python deploy.py --keep-temp` - 保留临时文件
 - `python deploy.py --onedir` - 目录模式
+
+### 打包注意事项
+
+✅ **已修复**: `deploy.py` 现已包含所有必需依赖（pandas, openpyxl, numpy, tqdm）
+
+如果打包后运行出现缺少模块的错误：
+1. 确保虚拟环境中已安装所有依赖
+2. 删除旧的 build 和 dist 文件夹
+3. 重新运行 `python deploy.py`
 
 ## ❓ 常见问题
 
@@ -292,6 +304,30 @@ A: 支持 `.xlsx` 和 `.xls` 格式。
 
 ### Q: 如何批量处理多个文件？
 A: 在Web界面中可以一次选择多个文件进行处理。
+
+### Q: Windows 可执行文件提示缺少模块（tqdm）？
+A: **已修复！** `deploy.py` 现在会自动包含所有依赖。
+
+**重新打包步骤**：
+```bash
+# 1. 激活虚拟环境
+source venv/bin/activate
+
+# 2. 确保 tqdm 已安装
+pip install tqdm
+
+# 3. 删除旧的构建文件
+rm -rf build dist *.spec
+
+# 4. 重新打包
+python deploy.py
+```
+
+**验证修复**：
+```bash
+# 测试模块导入
+python -c "from modules import ExcelSplitter; print('✅ 导入成功')"
+```
 
 ### Q: 匹配规则是什么？
 A: 
